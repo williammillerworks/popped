@@ -1,24 +1,41 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --popped-bg: #f8f4ec;
+  --popped-surface: #fffdf8;
+  --popped-surface-soft: rgba(255, 253, 248, 0.78);
+  --popped-text: #111111;
+  --popped-muted: #6f6a61;
+  --popped-border: rgba(17, 17, 17, 0.12);
+  --popped-border-strong: rgba(17, 17, 17, 0.24);
+  --popped-iridescent-a: rgba(185, 226, 255, 0.55);
+  --popped-iridescent-b: rgba(255, 198, 234, 0.45);
+  --popped-iridescent-c: rgba(229, 255, 194, 0.35);
+  --popped-shadow: 0 18px 60px rgba(17, 17, 17, 0.08);
+  --popped-shadow-soft: 0 12px 34px rgba(17, 17, 17, 0.06);
+  --background: var(--popped-bg);
+  --foreground: var(--popped-text);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-popped-bg: var(--popped-bg);
+  --color-popped-surface: var(--popped-surface);
+  --color-popped-surface-soft: var(--popped-surface-soft);
+  --color-popped-text: var(--popped-text);
+  --color-popped-muted: var(--popped-muted);
+  --color-popped-border: var(--popped-border);
+  --color-popped-border-strong: var(--popped-border-strong);
+  --color-popped-iridescent-a: var(--popped-iridescent-a);
+  --color-popped-iridescent-b: var(--popped-iridescent-b);
+  --color-popped-iridescent-c: var(--popped-iridescent-c);
+  --shadow-popped: var(--popped-shadow);
+  --shadow-popped-soft: var(--popped-shadow-soft);
   --font-sans: "Avenir Next", "SF Pro Rounded", "Trebuchet MS", ui-sans-serif,
     system-ui, sans-serif;
   --font-mono: "SFMono-Regular", "Cascadia Mono", "Liberation Mono",
     ui-monospace, monospace;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
@@ -26,4 +43,205 @@ body {
   color: var(--foreground);
   font-family: "Avenir Next", "SF Pro Rounded", "Trebuchet MS", ui-sans-serif,
     system-ui, sans-serif;
+}
+
+.popped-app-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 18% 12%,
+      var(--popped-iridescent-a),
+      transparent 28rem
+    ),
+    radial-gradient(
+      circle at 86% 8%,
+      var(--popped-iridescent-b),
+      transparent 24rem
+    ),
+    radial-gradient(
+      circle at 54% 104%,
+      var(--popped-iridescent-c),
+      transparent 30rem
+    ),
+    var(--popped-bg);
+  color: var(--popped-text);
+}
+
+.popped-app-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(17, 17, 17, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 17, 17, 0.025) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: linear-gradient(to bottom, transparent, black 18%, black 82%, transparent);
+}
+
+.popped-app-shell::after {
+  content: "";
+  position: absolute;
+  inset: auto 8% 5% 8%;
+  z-index: -1;
+  height: 18rem;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at 50% 50%,
+      rgba(255, 255, 255, 0.64),
+      rgba(255, 255, 255, 0) 68%
+    );
+  filter: blur(18px);
+  opacity: 0.7;
+}
+
+.popped-game-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--popped-border);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.68), transparent 34%),
+    var(--popped-surface);
+  box-shadow: var(--popped-shadow);
+}
+
+.popped-game-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(
+      120deg,
+      rgba(255, 255, 255, 0.86),
+      rgba(185, 226, 255, 0.2) 24%,
+      transparent 42%
+    );
+  opacity: 0.58;
+}
+
+.popped-game-card > * {
+  position: relative;
+}
+
+.popped-shell-bar {
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.54);
+  box-shadow: var(--popped-shadow-soft);
+  color: var(--popped-muted);
+}
+
+.popped-countdown-pulse {
+  animation: popped-pressure-build 680ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.popped-stage-snap {
+  animation: popped-crisp-enter 220ms ease-out;
+}
+
+.popped-result-open {
+  animation: popped-surface-open 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.popped-album-reveal {
+  animation: popped-album-in 460ms ease-out 90ms both;
+}
+
+.popped-spoiler-settle {
+  animation: popped-crisp-enter 260ms ease-out;
+}
+
+@keyframes popped-pressure-build {
+  0% {
+    opacity: 0.58;
+    transform: scale(0.965);
+    box-shadow:
+      0 0 0 0 rgba(17, 17, 17, 0.1),
+      0 22px 70px rgba(32, 24, 19, 0.12);
+  }
+
+  58% {
+    opacity: 1;
+    transform: scale(1.025);
+    box-shadow:
+      0 0 0 12px rgba(17, 17, 17, 0.035),
+      0 22px 70px rgba(32, 24, 19, 0.18);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow:
+      0 0 0 0 rgba(17, 17, 17, 0),
+      0 22px 70px rgba(32, 24, 19, 0.2);
+  }
+}
+
+@keyframes popped-crisp-enter {
+  from {
+    opacity: 0.82;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popped-surface-open {
+  0% {
+    opacity: 0;
+    clip-path: inset(8% 0 8% 0 round 1.75rem);
+    transform: translateY(8px);
+  }
+
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0 round 1.75rem);
+    transform: translateY(0);
+  }
+}
+
+@keyframes popped-album-in {
+  from {
+    opacity: 0;
+    filter: saturate(0.72) blur(6px);
+    transform: translateY(5px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    filter: saturate(1) blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popped-app-shell *,
+  .popped-app-shell *::before,
+  .popped-app-shell *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .popped-app-shell button:hover {
+    transform: none !important;
+  }
+
+  .popped-countdown-pulse,
+  .popped-stage-snap,
+  .popped-result-open,
+  .popped-album-reveal,
+  .popped-spoiler-settle {
+    animation: none;
+  }
 }

@@ -24,9 +24,9 @@ export default async function Home() {
           hasPuzzle={false}
           status={todayPuzzle.errorMessage ? "error" : "missing"}
         />
-        <main className="min-h-dvh bg-[radial-gradient(circle_at_50%_0%,#ffe7c7_0,#f7f1e8_34rem)] px-3 py-3 text-[#201813] sm:px-6 sm:py-6">
-          <section className="mx-auto flex min-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col justify-between gap-8 rounded-[2rem] border border-[#201813]/10 bg-[#fffaf1]/95 p-4 shadow-[0_20px_70px_rgba(32,24,19,0.12)] backdrop-blur sm:min-h-[calc(100dvh-3rem)] sm:p-6">
-            <div className="flex items-center justify-between rounded-full bg-white/60 px-3 py-2 text-[0.68rem] font-black uppercase tracking-[0.22em] text-[#8a5f3b]">
+        <main className="popped-app-shell px-3 py-3 sm:px-6 sm:py-6">
+          <section className="popped-game-card mx-auto flex min-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col justify-between gap-8 rounded-[1.75rem] p-4 sm:min-h-[calc(100dvh-3rem)] sm:p-6">
+            <div className="popped-shell-bar flex items-center justify-between rounded-full px-3 py-2 text-[0.68rem] font-black uppercase tracking-[0.22em]">
               <span>Daily K-pop</span>
               <span className="font-mono tabular-nums">{todayPuzzle.date}</span>
             </div>
