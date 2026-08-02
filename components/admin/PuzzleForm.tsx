@@ -2,10 +2,19 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import type { FormEvent } from "react";
 import { useActionState, useState } from "react";
 
-import { STAGE_DURATIONS_SECONDS } from "../../config/game";
-import { AdminAudioTimestampEditor } from "./AdminAudioTimestampEditor";
+import {
+  DEFAULT_DURATION_PRESET_ID,
+  DURATION_PRESET_IDS,
+  getDurationPreset,
+  type DurationPresetId,
+} from "../../config/game";
+import {
+  AdminAudioTimestampEditor,
+  type AudioRangeValidationState,
+} from "./AdminAudioTimestampEditor";
 import {
   EMPTY_PUZZLE_FORM_STATE,
   type PuzzleFormState,
@@ -13,6 +22,7 @@ import {
 import type { MusicSearchResult } from "../../types/music";
 import type {
   PuzzleDifficulty,
+  PuzzleEditor,
   PuzzleSource,
   PuzzleStatus,
 } from "../../types/puzzle";
@@ -26,6 +36,8 @@ type PuzzleFormValues = {
   countsTowardPuzzleNumber: boolean;
   date: string;
   difficulty: "" | PuzzleDifficulty;
+  durationPresetId: DurationPresetId;
+  editorId: string;
   isTest: boolean;
   notes: string;
   previewStartSeconds: string;
@@ -45,6 +57,7 @@ type PuzzleFormProps = {
     formData: FormData,
   ) => Promise<PuzzleFormState>;
   initialValues?: Partial<PuzzleFormValues>;
+  editorOptions: PuzzleEditor[];
   mode: "create" | "edit";
 };
 
@@ -62,6 +75,8 @@ const DEFAULT_VALUES: PuzzleFormValues = {
   countsTowardPuzzleNumber: false,
   date: "",
   difficulty: "",
+  durationPresetId: DEFAULT_DURATION_PRESET_ID,
+  editorId: "",
   isTest: true,
   notes: "",
   previewStartSeconds: "0",
@@ -88,14 +103,24 @@ const DIFFICULTY_OPTIONS: PuzzleDifficulty[] = [
   "deep_cut",
 ];
 const SOURCE_OPTIONS: PuzzleSource[] = ["manual", "itunes"];
+const IDLE_AUDIO_RANGE_VALIDATION: AudioRangeValidationState = {
+  message: "",
+  status: "idle",
+};
 
-export function PuzzleForm({ action, initialValues, mode }: PuzzleFormProps) {
+export function PuzzleForm({
+  action,
+  editorOptions,
+  initialValues,
+  mode,
+}: PuzzleFormProps) {
   const [state, formAction, isPending] = useActionState(
     action,
     EMPTY_PUZZLE_FORM_STATE,
   );
   const [values, setValues] = useState<PuzzleFormValues>({
     ...DEFAULT_VALUES,
+    editorId: editorOptions[0]?.id ?? "",
     ...initialValues,
   });
   const [term, setTerm] = useState("");
@@ -108,10 +133,22 @@ export function PuzzleForm({ action, initialValues, mode }: PuzzleFormProps) {
   const [searchError, setSearchError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [audioRangeValidation, setAudioRangeValidation] =
+    useState<AudioRangeValidationState>(IDLE_AUDIO_RANGE_VALIDATION);
 
   const visibleResults = showUnusableResults
     ? results
     : results.filter((result) => Boolean(result.previewUrl));
+  const durationPreset = getDurationPreset(values.durationPresetId);
+  const stageDurations = durationPreset.stageDurations;
+  const isAudioRangeBlocking =
+    audioRangeValidation.status === "checking" ||
+    audioRangeValidation.status === "invalid";
+  const isPublishedPresetChange =
+    mode === "edit" &&
+    initialValues?.status === "published" &&
+    initialValues.durationPresetId !== undefined &&
+    values.durationPresetId !== initialValues.durationPresetId;
 
   async function handleSearch(formData: FormData) {
     const nextTerm = String(formData.get("term") ?? "").trim();
@@ -204,6 +241,12 @@ export function PuzzleForm({ action, initialValues, mode }: PuzzleFormProps) {
       "acceptedAnswers",
       ensureListIncludes(values.acceptedAnswers, trimmedAlias),
     );
+  }
+
+  function handlePuzzleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (isAudioRangeBlocking) {
+      event.preventDefault();
+    }
   }
 
   return (
@@ -307,7 +350,11 @@ export function PuzzleForm({ action, initialValues, mode }: PuzzleFormProps) {
         </div>
       </section>
 
-      <form action={formAction} className="grid gap-5">
+      <form
+        action={formAction}
+        className="grid gap-5"
+        onSubmit={handlePuzzleSubmit}
+      >
         <section className="rounded-3xl border border-white/10 bg-[#fffaf1] p-5 text-[#211b17]">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2">
@@ -318,8 +365,7 @@ export function PuzzleForm({ action, initialValues, mode }: PuzzleFormProps) {
                 {mode === "create" ? "Create puzzle" : "Edit puzzle"}
               </h2>
               <p className="text-sm leading-6 text-[#5f5148]">
-                Stage durations are fixed globally and are not editable per
-                puzzle.
+                Choose one versioned six-stage duration preset for this puzzle.
               </p>
             </div>
             <Link
@@ -331,14 +377,54 @@ export function PuzzleForm({ action, initialValues, mode }: PuzzleFormProps) {
           </div>
 
           <div className="mt-5 grid gap-3 rounded-3xl border border-[#211b17]/10 bg-[#f7f1e8] p-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b05f3c]">
-              Fixed stages
-            </p>
-            <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
-              {STAGE_DURATIONS_SECONDS.map((duration, index) => (
+            <label className="space-y-2">
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-[#b05f3c]">
+                Duration preset *
+              </span>
+              <select
+                aria-invalid={Boolean(state.errors.durationPresetId)}
+                className="h-11 w-full rounded-2xl border border-[#211b17]/15 bg-white px-4 text-sm font-bold text-[#211b17] outline-none transition focus:border-[#b05f3c] focus:ring-4 focus:ring-[#b05f3c]/15"
+                name="durationPresetId"
+                onChange={(event) =>
+                  updateField(
+                    "durationPresetId",
+                    event.target.value as DurationPresetId,
+                  )
+                }
+                required
+                value={values.durationPresetId}
+              >
+                {DURATION_PRESET_IDS.map((durationPresetId) => {
+                  const option = getDurationPreset(durationPresetId);
+
+                  return (
+                    <option key={durationPresetId} value={durationPresetId}>
+                      {option.label} ({durationPresetId})
+                    </option>
+                  );
+                })}
+              </select>
+              <span className="block text-sm leading-6 text-[#5f5148]">
+                {durationPreset.description}
+              </span>
+              <FieldHelp error={state.errors.durationPresetId} />
+            </label>
+
+            {isPublishedPresetChange ? (
+              <p
+                className="rounded-2xl bg-[#fff0bd] px-4 py-3 text-sm font-bold text-[#684b00]"
+                role="status"
+              >
+                This puzzle is already published. Changing its duration preset
+                changes the clue timing for anyone who opens it after you save.
+              </p>
+            ) : null}
+
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {stageDurations.map((duration, index) => (
                 <div
                   className="rounded-2xl bg-white px-3 py-2 text-center text-sm font-black"
-                  key={duration}
+                  key={`${values.durationPresetId}-${duration}`}
                 >
                   <span className="block text-[0.65rem] uppercase tracking-[0.14em] text-[#8a5f3b]">
                     Stage {index + 1}
@@ -384,6 +470,28 @@ export function PuzzleForm({ action, initialValues, mode }: PuzzleFormProps) {
                 value={values.status}
               />
             </div>
+
+            <label className="space-y-2">
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-[#b05f3c]">
+                Editor *
+              </span>
+              <select
+                aria-invalid={Boolean(state.errors.editorId)}
+                className="h-11 w-full rounded-2xl border border-[#211b17]/15 bg-white px-4 text-sm font-bold text-[#211b17] outline-none transition focus:border-[#b05f3c] focus:ring-4 focus:ring-[#b05f3c]/15"
+                name="editorId"
+                onChange={(event) => updateField("editorId", event.target.value)}
+                required
+                value={values.editorId}
+              >
+                <option value="">Choose an editor</option>
+                {editorOptions.map((editor) => (
+                  <option key={editor.id} value={editor.id}>
+                    {editor.name}
+                  </option>
+                ))}
+              </select>
+              <FieldHelp error={state.errors.editorId} />
+            </label>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <FormInput
@@ -459,12 +567,19 @@ export function PuzzleForm({ action, initialValues, mode }: PuzzleFormProps) {
               />
               <AdminAudioTimestampEditor
                 error={state.errors.previewStartSeconds}
+                onRangeValidationChange={setAudioRangeValidation}
                 onStartSecondsChange={(value) =>
                   updateField("previewStartSeconds", value)
                 }
                 previewStartSeconds={values.previewStartSeconds}
                 previewUrl={values.previewUrl}
+                stageDurations={stageDurations}
               />
+              {audioRangeValidation.status === "checking" ? (
+                <p className="text-sm font-bold text-[#5f5148]" role="status">
+                  {audioRangeValidation.message}
+                </p>
+              ) : null}
             </div>
 
             <FormInput
@@ -579,11 +694,15 @@ export function PuzzleForm({ action, initialValues, mode }: PuzzleFormProps) {
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
             <button
               className="h-12 rounded-full bg-[#211b17] px-6 text-sm font-black text-[#fffaf1] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-              disabled={isPending}
+              disabled={isPending || isAudioRangeBlocking}
               type="submit"
             >
               {isPending
                 ? "Saving..."
+                : audioRangeValidation.status === "checking"
+                  ? "Checking audio..."
+                  : audioRangeValidation.status === "invalid"
+                    ? "Fix audio range"
                 : mode === "create"
                   ? "Create puzzle"
                   : "Save puzzle"}

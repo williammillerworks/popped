@@ -1,7 +1,22 @@
 import type { Puzzle } from "../types/puzzle";
-import type { PuzzleInsert, PuzzleRow, PuzzleUpdate } from "../types/database";
+import {
+  DEFAULT_DURATION_PRESET_ID,
+  isDurationPresetId,
+} from "../config/game";
+import type {
+  EditorRow,
+  PuzzleInsert,
+  PuzzleRow,
+  PuzzleUpdate,
+} from "../types/database";
+import { LEGACY_EDITOR } from "./editors";
 
-export function mapPuzzleRowToPuzzle(row: PuzzleRow): Puzzle {
+export type PuzzleRowWithEditor = Omit<PuzzleRow, "editor_id"> & {
+  editor_id?: string;
+  editor?: Pick<EditorRow, "display_name" | "id"> | null;
+};
+
+export function mapPuzzleRowToPuzzle(row: PuzzleRowWithEditor): Puzzle {
   return {
     id: row.id,
     date: row.date,
@@ -9,6 +24,8 @@ export function mapPuzzleRowToPuzzle(row: PuzzleRow): Puzzle {
     status: row.status,
     isTest: row.is_test,
     countsTowardPuzzleNumber: row.counts_toward_puzzle_number,
+    editorId: row.editor_id ?? LEGACY_EDITOR.id,
+    editorName: row.editor?.display_name ?? LEGACY_EDITOR.name,
     songTitleEnglish: row.song_title_english,
     songTitleKorean: row.song_title_korean,
     artistName: row.artist_name,
@@ -18,6 +35,9 @@ export function mapPuzzleRowToPuzzle(row: PuzzleRow): Puzzle {
     sourceCountry: row.source_country,
     previewUrl: row.preview_url,
     previewStartSeconds: Number(row.preview_start_seconds),
+    durationPresetId: isDurationPresetId(row.duration_preset_id)
+      ? row.duration_preset_id
+      : DEFAULT_DURATION_PRESET_ID,
     canonicalAnswerEnglish: row.canonical_answer_english,
     canonicalAnswerKorean: row.canonical_answer_korean,
     acceptedAnswers: row.accepted_answers,
@@ -37,6 +57,7 @@ export function mapPuzzleToPuzzleInsert(puzzle: Puzzle): PuzzleInsert {
     status: puzzle.status,
     is_test: puzzle.isTest,
     counts_toward_puzzle_number: puzzle.countsTowardPuzzleNumber,
+    editor_id: puzzle.editorId,
     song_title_english: puzzle.songTitleEnglish,
     song_title_korean: puzzle.songTitleKorean ?? null,
     artist_name: puzzle.artistName,
@@ -46,6 +67,7 @@ export function mapPuzzleToPuzzleInsert(puzzle: Puzzle): PuzzleInsert {
     source_country: puzzle.sourceCountry ?? null,
     preview_url: puzzle.previewUrl,
     preview_start_seconds: puzzle.previewStartSeconds,
+    duration_preset_id: puzzle.durationPresetId,
     canonical_answer_english: puzzle.canonicalAnswerEnglish,
     canonical_answer_korean: puzzle.canonicalAnswerKorean ?? null,
     accepted_answers: puzzle.acceptedAnswers,
@@ -72,6 +94,7 @@ export function mapPuzzleToPuzzleUpdate(
     "counts_toward_puzzle_number",
     puzzle.countsTowardPuzzleNumber,
   );
+  setIfDefined(update, "editor_id", puzzle.editorId);
   setIfDefined(update, "song_title_english", puzzle.songTitleEnglish);
   setIfDefined(update, "song_title_korean", puzzle.songTitleKorean);
   setIfDefined(update, "artist_name", puzzle.artistName);
@@ -81,6 +104,7 @@ export function mapPuzzleToPuzzleUpdate(
   setIfDefined(update, "source_country", puzzle.sourceCountry);
   setIfDefined(update, "preview_url", puzzle.previewUrl);
   setIfDefined(update, "preview_start_seconds", puzzle.previewStartSeconds);
+  setIfDefined(update, "duration_preset_id", puzzle.durationPresetId);
   setIfDefined(update, "canonical_answer_english", puzzle.canonicalAnswerEnglish);
   setIfDefined(update, "canonical_answer_korean", puzzle.canonicalAnswerKorean);
   setIfDefined(update, "accepted_answers", puzzle.acceptedAnswers);

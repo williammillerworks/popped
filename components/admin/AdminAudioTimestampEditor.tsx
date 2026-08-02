@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  STAGE_DURATIONS_SECONDS,
-  type StageNumber,
-} from "../../config/game";
+import { type StageNumber } from "../../config/game";
 import { isAutoplayBlocked, seekAudio } from "../../lib/audioPlayback";
+import { validateAudioPreviewRange } from "../../lib/audioPreviewValidation";
 
 type PlaybackMode = "full" | "stage" | "reveal";
 type PlaybackStatus = "idle" | "loading" | "playing" | "finished" | "error";
@@ -18,11 +16,24 @@ type PlaybackState = {
   status: PlaybackStatus;
 };
 
+type AudioMetadataState = {
+  durationSeconds: number | null;
+  previewUrl: string;
+  status: "ready" | "error";
+};
+
+export type AudioRangeValidationState = {
+  message: string;
+  status: "idle" | "checking" | "valid" | "invalid" | "unavailable";
+};
+
 type AdminAudioTimestampEditorProps = {
   error?: string;
+  onRangeValidationChange: (state: AudioRangeValidationState) => void;
   onStartSecondsChange: (value: string) => void;
   previewStartSeconds: string;
   previewUrl: string;
+  stageDurations: readonly number[];
 };
 
 const IDLE_PLAYBACK: PlaybackState = {
@@ -33,9 +44,11 @@ const IDLE_PLAYBACK: PlaybackState = {
 
 export function AdminAudioTimestampEditor({
   error,
+  onRangeValidationChange,
   onStartSecondsChange,
   previewStartSeconds,
   previewUrl,
+  stageDurations,
 }: AdminAudioTimestampEditorProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const activePlayIdRef = useRef(0);
@@ -43,6 +56,8 @@ export function AdminAudioTimestampEditor({
   const [audioMessage, setAudioMessage] = useState(
     "Add a preview URL, then audition the timestamp.",
   );
+  const [audioMetadata, setAudioMetadata] =
+    useState<AudioMetadataState | null>(null);
   const [playback, setPlayback] = useState<PlaybackState>(IDLE_PLAYBACK);
 
   const startSeconds = parsePreviewStartSeconds(previewStartSeconds);
@@ -51,6 +66,26 @@ export function AdminAudioTimestampEditor({
     ? audioMessage
     : "Add a preview URL, then audition the timestamp.";
   const displayedPlayback = hasPreviewUrl ? playback : IDLE_PLAYBACK;
+  const metadataMatchesPreview = audioMetadata?.previewUrl === previewUrl;
+  const metadataStatus = !hasPreviewUrl
+    ? "idle"
+    : metadataMatchesPreview
+      ? audioMetadata.status
+      : "loading";
+  const audioDurationSeconds = metadataMatchesPreview
+    ? audioMetadata.durationSeconds
+    : null;
+  const rangeValidation = useMemo(
+    () =>
+      audioDurationSeconds === null
+        ? null
+        : validateAudioPreviewRange({
+            audioDurationSeconds,
+            previewStartSeconds: startSeconds,
+            stageDurations,
+          }),
+    [audioDurationSeconds, stageDurations, startSeconds],
+  );
 
   useEffect(() => {
     activePlayIdRef.current += 1;
@@ -82,8 +117,23 @@ export function AdminAudioTimestampEditor({
       setAudioMessage("Audio ready.");
     }
 
+    function handleLoadedMetadata() {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        setAudioMetadata({
+          durationSeconds: audio.duration,
+          previewUrl,
+          status: "ready",
+        });
+      }
+    }
+
     function handleError() {
       clearStopInterval();
+      setAudioMetadata({
+        durationSeconds: null,
+        previewUrl,
+        status: "error",
+      });
       setAudioMessage("Audio could not load. Check the preview URL.");
       setPlayback({
         label: "Audio load failed.",
@@ -103,7 +153,9 @@ export function AdminAudioTimestampEditor({
 
     audio.addEventListener("loadstart", handleLoadStart);
     audio.addEventListener("canplay", handleCanPlay);
+    audio.addEventListener("durationchange", handleLoadedMetadata);
     audio.addEventListener("error", handleError);
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("ended", handleEnded);
     audio.load();
 
@@ -112,13 +164,49 @@ export function AdminAudioTimestampEditor({
       audio.pause();
       audio.removeEventListener("loadstart", handleLoadStart);
       audio.removeEventListener("canplay", handleCanPlay);
+      audio.removeEventListener("durationchange", handleLoadedMetadata);
       audio.removeEventListener("error", handleError);
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
       audio.removeAttribute("src");
       audio.load();
       audioRef.current = null;
     };
   }, [hasPreviewUrl, previewUrl]);
+
+  useEffect(() => {
+    if (!hasPreviewUrl) {
+      onRangeValidationChange({ message: "", status: "idle" });
+      return;
+    }
+
+    if (metadataStatus === "loading") {
+      onRangeValidationChange({
+        message: "Checking the available audio duration...",
+        status: "checking",
+      });
+      return;
+    }
+
+    if (metadataStatus === "error" || !rangeValidation) {
+      onRangeValidationChange({
+        message:
+          "Audio duration could not be verified. Check the preview URL before publishing.",
+        status: "unavailable",
+      });
+      return;
+    }
+
+    onRangeValidationChange({
+      message: rangeValidation.message,
+      status: rangeValidation.valid ? "valid" : "invalid",
+    });
+  }, [
+    hasPreviewUrl,
+    metadataStatus,
+    onRangeValidationChange,
+    rangeValidation,
+  ]);
 
   function adjustStartSeconds(delta: number) {
     onStartSecondsChange(formatTimestampInput(Math.max(0, startSeconds + delta)));
@@ -235,8 +323,8 @@ export function AdminAudioTimestampEditor({
             Audition the puzzle moment
           </h3>
           <p className="text-sm leading-6 text-[#5f5148]">
-            All stage previews start from this timestamp. Stage durations remain
-            fixed globally.
+            All six stage previews start from this timestamp and use the
+            selected puzzle preset.
           </p>
         </div>
 
@@ -300,8 +388,17 @@ export function AdminAudioTimestampEditor({
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-        {STAGE_DURATIONS_SECONDS.map((durationSeconds, index) => {
+      {rangeValidation && !rangeValidation.valid ? (
+        <p
+          className="mt-3 rounded-2xl bg-[#ffe0d4] px-4 py-3 text-sm font-bold text-[#7a2d1c]"
+          role="alert"
+        >
+          {rangeValidation.message}
+        </p>
+      ) : null}
+
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+        {stageDurations.map((durationSeconds, index) => {
           const stage = (index + 1) as StageNumber;
 
           return (

@@ -1,4 +1,5 @@
 import type { GameResult } from "../types/game";
+import { TOTAL_STAGES } from "../config/game";
 
 export function getResultLabel(result: GameResult): string {
   if (!result.solved) {
@@ -24,7 +25,7 @@ export function getResultLabel(result: GameResult): string {
     return "Fast Ear";
   }
 
-  if (result.solvedStage === 7) {
+  if (result.solvedStage === TOTAL_STAGES) {
     return "Still Got It";
   }
 

@@ -17,6 +17,33 @@ export function getTodayDateInTimeZone(
   return `${year}-${month}-${day}`;
 }
 
+export function getHourInTimeZone(
+  timeZone = DEFAULT_PUZZLE_TIME_ZONE,
+): number {
+  return Number(
+    new Intl.DateTimeFormat("en-US", {
+      hour: "2-digit",
+      hourCycle: "h23",
+      timeZone,
+    }).format(new Date()),
+  );
+}
+
+export function getPreviousCalendarDate(date: string): string {
+  const parsedDate = new Date(`${date}T00:00:00.000Z`);
+  parsedDate.setUTCDate(parsedDate.getUTCDate() - 1);
+  return parsedDate.toISOString().slice(0, 10);
+}
+
+export function formatPuzzleDisplayDate(date: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(new Date(`${date}T00:00:00.000Z`));
+}
+
 function getDatePart(
   dateParts: Intl.DateTimeFormatPart[],
   type: Intl.DateTimeFormatPartTypes,

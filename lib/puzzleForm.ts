@@ -1,3 +1,4 @@
+import { DURATION_PRESET_IDS } from "../config/game";
 import type {
   PuzzleDifficulty,
   PuzzleSource,
@@ -37,6 +38,12 @@ export function parsePuzzleFormData(formData: FormData):
   const errors: Record<string, string> = {};
 
   const date = getRequiredString(formData, "date", "Date is required.", errors);
+  const editorId = getRequiredString(
+    formData,
+    "editorId",
+    "Editor is required.",
+    errors,
+  );
   const status = getEnumValue(
     formData,
     "status",
@@ -66,6 +73,13 @@ export function parsePuzzleFormData(formData: FormData):
     formData,
     "previewStartSeconds",
     "Preview start must be 0 or greater.",
+    errors,
+  );
+  const durationPresetId = getEnumValue(
+    formData,
+    "durationPresetId",
+    DURATION_PRESET_IDS,
+    "Choose a valid duration preset.",
     errors,
   );
   const canonicalAnswerEnglish = getRequiredString(
@@ -133,6 +147,7 @@ export function parsePuzzleFormData(formData: FormData):
       status,
       is_test: isTest,
       counts_toward_puzzle_number: countsTowardPuzzleNumber,
+      editor_id: editorId,
       song_title_english: songTitleEnglish,
       song_title_korean: songTitleKorean,
       artist_name: artistName,
@@ -142,6 +157,7 @@ export function parsePuzzleFormData(formData: FormData):
       source_country: sourceCountry,
       preview_url: previewUrl,
       preview_start_seconds: previewStartSeconds,
+      duration_preset_id: durationPresetId,
       canonical_answer_english: canonicalAnswerEnglish,
       canonical_answer_korean: canonicalAnswerKorean,
       accepted_answers: acceptedAnswers,

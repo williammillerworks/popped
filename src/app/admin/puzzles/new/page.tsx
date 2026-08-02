@@ -1,11 +1,13 @@
 import { PuzzleForm } from "../../../../../components/admin/PuzzleForm";
 import { requireAdminSession } from "../../../../../lib/adminAuth";
+import { getActiveAdminEditors } from "../../../../../lib/adminPuzzles";
 import { createPuzzleAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewPuzzlePage() {
   await requireAdminSession();
+  const editorOptions = await getActiveAdminEditors();
 
   return (
     <main className="min-h-dvh bg-[#181411] px-5 py-8 text-[#fffaf1]">
@@ -23,7 +25,11 @@ export default async function NewPuzzlePage() {
           </p>
         </div>
 
-        <PuzzleForm action={createPuzzleAction} mode="create" />
+        <PuzzleForm
+          action={createPuzzleAction}
+          editorOptions={editorOptions}
+          mode="create"
+        />
       </section>
     </main>
   );

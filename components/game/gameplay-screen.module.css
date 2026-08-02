@@ -1,0 +1,420 @@
+.shell {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #242424;
+  color: #000000;
+  letter-spacing: 0;
+  isolation: isolate;
+}
+
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.content {
+  height: 100vh;
+  height: 100svh;
+  height: 100dvh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: calc(64px + env(safe-area-inset-top)) 62px minmax(0, 1fr) 68px auto;
+}
+
+.underlay {
+  min-height: 0;
+  display: grid;
+  grid-column: 1;
+  grid-row: 1 / -1;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: subgrid;
+}
+
+.header {
+  min-height: calc(64px + env(safe-area-inset-top));
+  display: flex;
+  flex: 0 0 64px;
+  align-items: center;
+  justify-content: flex-end;
+  border-bottom: 1px solid #dddddd;
+  padding: env(safe-area-inset-top) 20px 0;
+}
+
+.morePlaceholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  user-select: none;
+}
+
+.chevron {
+  width: 20px;
+  height: 20px;
+  background: currentColor;
+  -webkit-mask: url("/icons/chevron-down.svg") center / contain no-repeat;
+  mask: url("/icons/chevron-down.svg") center / contain no-repeat;
+  pointer-events: none;
+}
+
+.progressRow {
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  flex: 0 0 62px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+}
+
+.stageLabel {
+  color: #4c4945;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.progressSegments {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  min-width: 0;
+}
+
+.progressSegments span {
+  height: 5px;
+  border-radius: 999px;
+  background: #dedede;
+  transition: background-color var(--popped-motion-ui)
+    var(--popped-ease-in-out);
+}
+
+.progressSegments .progressComplete {
+  background: #cd5df2;
+}
+
+.missCount {
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 400;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.missCountEntered {
+  animation: missCountIn var(--popped-motion-ui) var(--popped-ease-out) both;
+}
+
+.guessArea {
+  position: relative;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 12px 0;
+}
+
+.toastSlot {
+  position: absolute;
+  top: 50%;
+  right: 24px;
+  left: 24px;
+  min-height: 52px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transform: translateY(-74px);
+}
+
+.toast {
+  max-width: min(100%, 300px);
+  min-height: 49px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #cd5df2;
+  color: #ffffff;
+  padding: 10px 18px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  animation: toastIn var(--popped-motion-fast) var(--popped-ease-out) both;
+}
+
+.toastExiting .toast {
+  animation: toastOut var(--popped-motion-feedback-exit) var(--popped-ease-in)
+    both;
+}
+
+.guessLine {
+  position: relative;
+  width: 100%;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.guessText,
+.measureText {
+  font-weight: 700;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.guessText {
+  max-width: calc(100% - 48px);
+  overflow: hidden;
+}
+
+.correctGuess {
+  color: #cd5df2;
+  animation: correctGuessSettle var(--popped-motion-ui)
+    var(--popped-ease-out) both;
+}
+
+.measureText {
+  position: absolute;
+  left: -10000px;
+  visibility: hidden;
+  font-size: 28px;
+}
+
+.caret {
+  width: 3px;
+  height: 42px;
+  flex: 0 0 3px;
+  margin-left: 4px;
+  background: #cd5df2;
+  animation: caretBlink 1s step-end infinite;
+}
+
+.actions {
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: 0 0 68px;
+  gap: 10px;
+  padding: 6px 16px 8px;
+}
+
+.actionsHidden {
+  visibility: hidden;
+}
+
+.actionButton {
+  min-width: 0;
+  height: 54px;
+  min-height: 54px;
+  border: 1px solid #d8d8d8;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #000000;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.2;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--popped-motion-press) ease,
+    border-color var(--popped-motion-press) ease,
+    transform var(--popped-motion-press) var(--popped-ease-out);
+}
+
+.actionButton:not(:disabled):active {
+  background: #f5f5f5;
+  transform: scale(0.96);
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid var(--popped-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .actionButton:not(:disabled):hover {
+    border-color: #c7c7c7;
+    background: #fafafa;
+  }
+}
+
+.keyboardWrap {
+  flex: 0 0 auto;
+  padding:
+    8px
+    10px
+    max(40px, env(safe-area-inset-bottom));
+}
+
+@keyframes caretBlink {
+  0%,
+  48% {
+    opacity: 1;
+  }
+
+  49%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98);
+  }
+}
+
+@keyframes missCountIn {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes correctGuessSettle {
+  from {
+    opacity: 0.72;
+    transform: translateY(3px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (min-width: 540px) {
+  .shell {
+    padding: 16px;
+  }
+
+  .screen,
+  .content {
+    height: min(852px, calc(100dvh - 32px));
+    min-height: min(852px, calc(100dvh - 32px));
+  }
+
+  .screen {
+    width: min(100%, 393px);
+    border-radius: 28px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+  }
+}
+
+@media (max-width: 359px) {
+  .content {
+    grid-template-rows: calc(60px + env(safe-area-inset-top)) 62px minmax(0, 1fr) 68px auto;
+  }
+
+  .header {
+    min-height: calc(60px + env(safe-area-inset-top));
+    flex-basis: 60px;
+    padding: env(safe-area-inset-top) 16px 0;
+  }
+
+  .morePlaceholder {
+    font-size: 17px;
+  }
+
+  .progressRow {
+    gap: 9px;
+    padding: 0 14px;
+  }
+
+  .progressSegments {
+    gap: 5px;
+  }
+
+  .stageLabel,
+  .missCount {
+    font-size: 15px;
+  }
+
+  .guessArea {
+    padding-inline: 0;
+  }
+
+  .actions {
+    gap: 8px;
+    padding-inline: 12px;
+  }
+
+  .actionButton {
+    font-size: 15px;
+  }
+}
+
+@media (max-height: 620px) {
+  .shell {
+    min-height: 620px;
+    place-items: start center;
+    overflow-y: auto;
+  }
+
+  .screen,
+  .content {
+    height: 620px;
+    min-height: 620px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret {
+    animation: none;
+  }
+
+  .toast,
+  .toastExiting .toast,
+  .missCountEntered,
+  .correctGuess {
+    animation: none;
+  }
+
+  .progressSegments span,
+  .actionButton {
+    transition: none;
+  }
+
+  .actionButton:not(:disabled):active {
+    transform: none;
+  }
+}

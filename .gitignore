@@ -37,6 +37,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local tool state
+/docs/.pdca-status.json
+/supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -1,0 +1,953 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Popped Gameplay Motion Prototype</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --accent: #cd5df2;
+        --ink: #151515;
+        --muted: #dedede;
+        --key: #d2d4d8;
+        --scrim-opacity: 0.6;
+        --enter-duration: 220ms;
+        --handoff-duration: 200ms;
+        --exit-duration: 170ms;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+        --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        background: #202020;
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .workspace {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: minmax(393px, 440px) minmax(300px, 380px);
+        justify-content: center;
+        align-items: center;
+        gap: 28px;
+        padding: 28px;
+      }
+
+      .device {
+        width: min(393px, 100%);
+        aspect-ratio: 393 / 852;
+        position: relative;
+        overflow: hidden;
+        border-radius: 34px;
+        background: #fff;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.42);
+        isolation: isolate;
+      }
+
+      .gameplay {
+        height: 100%;
+        display: grid;
+        grid-template-rows: 64px 62px minmax(0, 1fr) 68px 198px;
+        background: #fff;
+      }
+
+      .menu {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+        border-bottom: 1px solid #ddd;
+        padding: 0 20px;
+        font-size: 18px;
+      }
+
+      .chevron {
+        width: 13px;
+        height: 13px;
+        border-right: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        transform: translateY(-2px) rotate(45deg);
+      }
+
+      .progress-row {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr);
+        align-items: center;
+        gap: 10px;
+        padding: 0 20px;
+      }
+
+      .stage-label {
+        color: #4c4945;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .segments {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .segment {
+        height: 5px;
+        border-radius: 999px;
+        background: var(--muted);
+        transition: background-color 220ms var(--ease-in-out);
+      }
+
+      .segment.complete {
+        background: var(--accent);
+      }
+
+      .guess-area {
+        display: grid;
+        place-items: center;
+        min-height: 0;
+      }
+
+      .caret {
+        width: 3px;
+        height: 42px;
+        background: var(--accent);
+        animation: caret-blink 1s step-end infinite;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        padding: 6px 16px 8px;
+      }
+
+      .game-button {
+        min-width: 0;
+        height: 54px;
+        border: 1px solid #d8d8d8;
+        border-radius: 12px;
+        background: #fff;
+        color: #111;
+        font-size: 16px;
+        transition:
+          background-color 120ms ease,
+          transform 120ms var(--ease-out);
+      }
+
+      .game-button:not(:disabled):active {
+        background: #f5f5f5;
+        transform: scale(0.97);
+      }
+
+      .keyboard {
+        display: grid;
+        grid-template-rows: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        padding: 8px 10px 22px;
+        font-size: 20px;
+        font-weight: 700;
+        user-select: none;
+      }
+
+      .key-row {
+        display: grid;
+        grid-template-columns: repeat(20, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .key {
+        grid-column: span 2;
+        display: grid;
+        place-items: center;
+        min-width: 0;
+        border-radius: 6px;
+        background: var(--key);
+      }
+
+      .key-row.home .key:first-child {
+        grid-column: 2 / span 2;
+      }
+
+      .key.wide {
+        grid-column: span 3;
+        font-size: 15px;
+      }
+
+      .key.space {
+        grid-column: span 13;
+        font-size: 15px;
+      }
+
+      .key.enter {
+        grid-column: span 4;
+        font-size: 15px;
+      }
+
+      .key.backspace {
+        font-size: 22px;
+        font-weight: 800;
+      }
+
+      .motion-layer {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        display: grid;
+        grid-template-rows: 64px 62px minmax(0, 1fr) 68px 198px;
+        place-items: stretch;
+        pointer-events: none;
+        visibility: hidden;
+      }
+
+      .motion-layer.active {
+        visibility: visible;
+      }
+
+      .scrim {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, var(--scrim-opacity));
+        opacity: 0;
+        transition: opacity var(--enter-duration) var(--ease-out);
+      }
+
+      .motion-layer.visible .scrim {
+        opacity: 1;
+      }
+
+      .motion-layer.exiting .scrim {
+        opacity: 0;
+        transition-duration: var(--exit-duration);
+        transition-timing-function: var(--ease-in);
+      }
+
+      .orb {
+        width: min(78vw, 300px);
+        max-width: calc(100% - 48px);
+        aspect-ratio: 1;
+        position: relative;
+        grid-row: 3;
+        place-self: center;
+        overflow: hidden;
+        border: 1px solid rgba(104, 109, 115, 0.34);
+        border-radius: 50%;
+        background: #f7f7f7;
+        opacity: 0;
+        transform: translateY(-22px) scale(0.96);
+        transition:
+          opacity var(--enter-duration) var(--ease-out),
+          transform var(--enter-duration) var(--ease-out);
+        will-change: transform, opacity;
+      }
+
+      .motion-layer.visible .orb {
+        opacity: 1;
+        transform: translateY(-22px) scale(1);
+      }
+
+      .motion-layer.exiting .orb {
+        opacity: 0;
+        transform: translateY(-18px) scale(0.985);
+        transition-duration: var(--exit-duration);
+        transition-timing-function: var(--ease-in);
+      }
+
+      .visualizer {
+        position: absolute;
+        inset: -12%;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 22% 24%, #f2aac5 0 14%, transparent 48%),
+          radial-gradient(circle at 78% 20%, #ffe3a5 0 16%, transparent 50%),
+          radial-gradient(circle at 70% 78%, #62d2d7 0 18%, transparent 52%),
+          radial-gradient(circle at 24% 76%, #aac8e5 0 16%, transparent 54%),
+          #d9d8d4;
+        opacity: 0;
+        transform: scale(0.98) rotate(-3deg);
+        transition:
+          opacity var(--handoff-duration) var(--ease-out),
+          transform var(--handoff-duration) var(--ease-in-out);
+      }
+
+      .motion-layer.playing .visualizer {
+        opacity: 1;
+        transform: scale(1.06) rotate(2deg);
+        animation: visualizer-drift 2.8s ease-in-out infinite alternate;
+      }
+
+      .count {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: var(--accent);
+        font-size: 72px;
+        font-weight: 700;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        opacity: 0;
+        transform: scale(0.97);
+      }
+
+      .motion-layer.countdown .count {
+        animation: count-in 170ms var(--ease-out) both;
+      }
+
+      .motion-layer.playing .count {
+        opacity: 0;
+        transform: scale(1.025);
+        transition:
+          opacity 100ms var(--ease-in),
+          transform 100ms var(--ease-in);
+      }
+
+      .phase-pill {
+        position: absolute;
+        top: 14px;
+        left: 14px;
+        z-index: 20;
+        min-width: 78px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 7px 10px;
+        color: #333;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: center;
+        opacity: 0;
+        transform: translateY(-4px);
+        transition:
+          opacity 160ms var(--ease-out),
+          transform 160ms var(--ease-out);
+      }
+
+      .motion-layer.active .phase-pill {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .control-panel {
+        align-self: stretch;
+        max-height: min(852px, calc(100vh - 56px));
+        overflow: auto;
+        border: 1px solid #3d3d3d;
+        border-radius: 18px;
+        background: #2a2a2a;
+        color: #f5f5f5;
+        padding: 22px;
+      }
+
+      .control-panel h1 {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.2;
+      }
+
+      .control-panel > p {
+        margin: 8px 0 20px;
+        color: #bdbdbd;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .preview-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .preview-button {
+        min-height: 44px;
+        border: 1px solid #505050;
+        border-radius: 10px;
+        background: #353535;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        transition:
+          background-color 120ms ease,
+          transform 120ms var(--ease-out);
+      }
+
+      .preview-button.primary {
+        border-color: var(--accent);
+        background: var(--accent);
+      }
+
+      .preview-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.48;
+      }
+
+      .preview-button:not(:disabled):active {
+        transform: scale(0.97);
+      }
+
+      .section-title {
+        margin: 24px 0 10px;
+        color: #999;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .presets {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px;
+        border-radius: 10px;
+        background: #202020;
+        padding: 4px;
+      }
+
+      .preset {
+        min-height: 34px;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: #aaa;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .preset.active {
+        background: #424242;
+        color: #fff;
+      }
+
+      .control-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .range-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) max-content;
+        gap: 5px 12px;
+        align-items: center;
+      }
+
+      .range-row label {
+        font-size: 13px;
+      }
+
+      .range-value {
+        color: #bdbdbd;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .range-row input {
+        grid-column: 1 / -1;
+        width: 100%;
+        accent-color: var(--accent);
+      }
+
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        font-size: 13px;
+      }
+
+      .toggle-row input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent);
+      }
+
+      .note {
+        margin-top: 20px;
+        border-left: 2px solid var(--accent);
+        padding-left: 10px;
+        color: #aaa;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      @keyframes caret-blink {
+        0%,
+        48% {
+          opacity: 1;
+        }
+
+        49%,
+        100% {
+          opacity: 0;
+        }
+      }
+
+      @keyframes count-in {
+        from {
+          opacity: 0;
+          transform: scale(0.97);
+        }
+
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes visualizer-drift {
+        from {
+          transform: scale(1.045) rotate(-3deg);
+        }
+
+        to {
+          transform: scale(1.08) rotate(3deg);
+        }
+      }
+
+      .reduced-motion *,
+      .reduced-motion *::before,
+      .reduced-motion *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .preview-button:not(:disabled):hover {
+          background: #414141;
+        }
+
+        .preview-button.primary:not(:disabled):hover {
+          background: #bd4ede;
+        }
+
+        .preset:hover {
+          color: #fff;
+        }
+      }
+
+      @media (max-width: 840px) {
+        .workspace {
+          grid-template-columns: minmax(0, 440px);
+          align-items: start;
+          padding: 0 0 28px;
+        }
+
+        .device {
+          width: min(393px, 100vw);
+          border-radius: 0;
+          box-shadow: none;
+        }
+
+        .control-panel {
+          width: min(393px, calc(100vw - 24px));
+          max-height: none;
+          justify-self: center;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .caret,
+        .visualizer,
+        .count,
+        .scrim,
+        .orb,
+        .segment,
+        .preview-button,
+        .game-button {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="workspace">
+      <section class="device" id="device" aria-label="Popped motion preview">
+        <div class="gameplay">
+          <header class="menu">
+            <span>More</span>
+            <span class="chevron" aria-hidden="true"></span>
+          </header>
+
+          <div class="progress-row">
+            <span class="stage-label" id="stageLabel">Stage 1</span>
+            <div class="segments" id="segments" aria-label="Stage progress"></div>
+          </div>
+
+          <div class="guess-area">
+            <span class="caret" aria-hidden="true"></span>
+          </div>
+
+          <div class="actions">
+            <button class="game-button" id="repeatButton" type="button">Repeat</button>
+            <button class="game-button" id="nextButton" type="button">Next Clue</button>
+          </div>
+
+          <div class="keyboard" aria-hidden="true">
+            <div class="key-row" data-keys="Q W E R T Y U I O P"></div>
+            <div class="key-row home" data-keys="A S D F G H J K L"></div>
+            <div class="key-row" data-keys="123 Z X C V B N M ⌫"></div>
+            <div class="key-row">
+              <span class="key wide">한/영</span>
+              <span class="key space">SPACE</span>
+              <span class="key enter">ENTER</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="motion-layer" id="motionLayer" aria-live="polite">
+          <div class="scrim"></div>
+          <div class="phase-pill" id="phasePill">Idle</div>
+          <div class="orb">
+            <div class="visualizer"></div>
+            <div class="count" id="count">3</div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="control-panel">
+        <h1>Gameplay motion lab</h1>
+        <p>
+          Compare the connected Countdown → Playing → Gameplay transition before
+          moving its values into the product.
+        </p>
+
+        <div class="preview-actions">
+          <button class="preview-button primary" id="playFirstButton" type="button">
+            Play 3 → 1
+          </button>
+          <button class="preview-button" id="playNextButton" type="button">
+            Next 2 → 1
+          </button>
+          <button class="preview-button" id="playRepeatButton" type="button">
+            Repeat
+          </button>
+          <button class="preview-button" id="resetButton" type="button">Reset</button>
+        </div>
+
+        <h2 class="section-title">Feel</h2>
+        <div class="presets" role="group" aria-label="Motion presets">
+          <button class="preset" data-preset="snappy" type="button">Snappy</button>
+          <button class="preset active" data-preset="balanced" type="button">Balanced</button>
+          <button class="preset" data-preset="soft" type="button">Soft</button>
+        </div>
+
+        <h2 class="section-title">Timing</h2>
+        <div class="control-list">
+          <div class="range-row">
+            <label for="enterDuration">Overlay enter</label>
+            <output class="range-value" id="enterDurationValue">220 ms</output>
+            <input id="enterDuration" type="range" min="120" max="400" step="10" value="220" />
+          </div>
+          <div class="range-row">
+            <label for="handoffDuration">Countdown → visualizer</label>
+            <output class="range-value" id="handoffDurationValue">200 ms</output>
+            <input id="handoffDuration" type="range" min="80" max="360" step="10" value="200" />
+          </div>
+          <div class="range-row">
+            <label for="playbackDuration">Playback simulation</label>
+            <output class="range-value" id="playbackDurationValue">700 ms</output>
+            <input id="playbackDuration" type="range" min="200" max="1800" step="50" value="700" />
+          </div>
+          <div class="range-row">
+            <label for="visualTail">Visual tail after audio</label>
+            <output class="range-value" id="visualTailValue">180 ms</output>
+            <input id="visualTail" type="range" min="0" max="500" step="20" value="180" />
+          </div>
+          <div class="range-row">
+            <label for="exitDuration">Overlay exit</label>
+            <output class="range-value" id="exitDurationValue">170 ms</output>
+            <input id="exitDuration" type="range" min="80" max="300" step="10" value="170" />
+          </div>
+          <div class="range-row">
+            <label for="scrimOpacity">Scrim opacity</label>
+            <output class="range-value" id="scrimOpacityValue">60%</output>
+            <input id="scrimOpacity" type="range" min="35" max="75" step="1" value="60" />
+          </div>
+        </div>
+
+        <h2 class="section-title">Accessibility</h2>
+        <label class="toggle-row" for="reducedMotion">
+          <span>Simulate reduced motion</span>
+          <input id="reducedMotion" type="checkbox" />
+        </label>
+
+        <p class="note">
+          Repeat intentionally skips the countdown. The same orb remains mounted
+          throughout the sequence; only its number and visualizer crossfade.
+        </p>
+      </aside>
+    </main>
+
+    <script>
+      const PRESETS = {
+        snappy: {
+          enterDuration: 170,
+          handoffDuration: 150,
+          playbackDuration: 600,
+          visualTail: 120,
+          exitDuration: 130,
+          scrimOpacity: 58,
+        },
+        balanced: {
+          enterDuration: 220,
+          handoffDuration: 200,
+          playbackDuration: 700,
+          visualTail: 180,
+          exitDuration: 170,
+          scrimOpacity: 60,
+        },
+        soft: {
+          enterDuration: 300,
+          handoffDuration: 280,
+          playbackDuration: 850,
+          visualTail: 240,
+          exitDuration: 220,
+          scrimOpacity: 62,
+        },
+      };
+
+      const device = document.querySelector("#device");
+      const motionLayer = document.querySelector("#motionLayer");
+      const phasePill = document.querySelector("#phasePill");
+      const count = document.querySelector("#count");
+      const stageLabel = document.querySelector("#stageLabel");
+      const segments = document.querySelector("#segments");
+      const nextButton = document.querySelector("#nextButton");
+      const repeatButton = document.querySelector("#repeatButton");
+      const previewButtons = [...document.querySelectorAll(".preview-button")];
+      const presetButtons = [...document.querySelectorAll(".preset")];
+      const reducedMotion = document.querySelector("#reducedMotion");
+
+      const settings = {
+        enterDuration: 220,
+        handoffDuration: 200,
+        playbackDuration: 700,
+        visualTail: 180,
+        exitDuration: 170,
+        scrimOpacity: 60,
+      };
+
+      let stage = 1;
+      let runId = 0;
+      let isRunning = false;
+
+      document.querySelectorAll("[data-keys]").forEach((row) => {
+        row.dataset.keys.split(" ").forEach((label) => {
+          const key = document.createElement("span");
+          key.className = `key${label === "⌫" ? " backspace" : ""}${label === "123" ? " wide" : ""}`;
+          key.textContent = label;
+          row.append(key);
+        });
+      });
+
+      function renderProgress() {
+        stageLabel.textContent = stage === 6 ? "Last Stage" : `Stage ${stage}`;
+        segments.replaceChildren();
+        for (let index = 1; index <= 6; index += 1) {
+          const segment = document.createElement("span");
+          segment.className = `segment${index <= stage ? " complete" : ""}`;
+          segments.append(segment);
+        }
+        nextButton.textContent = stage === 6 ? "Reveal Answer" : "Next Clue";
+      }
+
+      function wait(milliseconds, expectedRunId) {
+        return new Promise((resolve) => {
+          window.setTimeout(() => resolve(expectedRunId === runId), milliseconds);
+        });
+      }
+
+      function setPhase(phase, label) {
+        motionLayer.classList.remove("countdown", "playing", "exiting");
+        if (phase) motionLayer.classList.add(phase);
+        phasePill.textContent = label;
+      }
+
+      function setControlsDisabled(disabled) {
+        isRunning = disabled;
+        previewButtons.forEach((button) => {
+          if (button.id !== "resetButton") button.disabled = disabled;
+        });
+        nextButton.disabled = disabled;
+        repeatButton.disabled = disabled;
+      }
+
+      function restartCountAnimation(value) {
+        count.textContent = String(value);
+        count.style.animation = "none";
+        void count.offsetWidth;
+        count.style.animation = "";
+      }
+
+      async function enterOverlay(expectedRunId, startPhase) {
+        motionLayer.className = `motion-layer active ${startPhase}`;
+        setPhase(startPhase, startPhase === "playing" ? "Playing" : "Entering");
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        if (expectedRunId !== runId) return false;
+        motionLayer.classList.add("visible");
+        return wait(reducedMotion.checked ? 1 : settings.enterDuration, expectedRunId);
+      }
+
+      async function runCountdown(values, expectedRunId) {
+        setPhase("countdown", "Countdown");
+        motionLayer.classList.add("visible");
+        for (const value of values) {
+          restartCountAnimation(value);
+          const valid = await wait(reducedMotion.checked ? 80 : 1000, expectedRunId);
+          if (!valid) return false;
+        }
+        return true;
+      }
+
+      async function runPlayback(expectedRunId) {
+        setPhase("playing", "Playing");
+        motionLayer.classList.add("visible");
+        const handoffValid = await wait(
+          reducedMotion.checked ? 1 : settings.handoffDuration,
+          expectedRunId,
+        );
+        if (!handoffValid) return false;
+        const playbackValid = await wait(settings.playbackDuration, expectedRunId);
+        if (!playbackValid) return false;
+        phasePill.textContent = "Tail";
+        return wait(reducedMotion.checked ? 1 : settings.visualTail, expectedRunId);
+      }
+
+      async function exitOverlay(expectedRunId) {
+        setPhase("exiting", "Returning");
+        motionLayer.classList.add("visible");
+        const valid = await wait(
+          reducedMotion.checked ? 1 : settings.exitDuration,
+          expectedRunId,
+        );
+        if (!valid) return false;
+        motionLayer.className = "motion-layer";
+        phasePill.textContent = "Idle";
+        return true;
+      }
+
+      async function playSequence({ countdownValues, advanceStage }) {
+        if (isRunning) return;
+        const expectedRunId = ++runId;
+        setControlsDisabled(true);
+
+        const entered = await enterOverlay(
+          expectedRunId,
+          countdownValues.length ? "countdown" : "playing",
+        );
+        if (!entered) return;
+
+        if (countdownValues.length) {
+          const counted = await runCountdown(countdownValues, expectedRunId);
+          if (!counted) return;
+        }
+
+        const played = await runPlayback(expectedRunId);
+        if (!played) return;
+
+        const exited = await exitOverlay(expectedRunId);
+        if (!exited) return;
+
+        if (advanceStage) {
+          stage = Math.min(stage + 1, 6);
+          renderProgress();
+        }
+        setControlsDisabled(false);
+      }
+
+      function reset() {
+        runId += 1;
+        isRunning = false;
+        stage = 1;
+        motionLayer.className = "motion-layer";
+        setControlsDisabled(false);
+        renderProgress();
+      }
+
+      function updateSetting(name, value) {
+        settings[name] = Number(value);
+        if (name === "enterDuration") {
+          document.documentElement.style.setProperty("--enter-duration", `${value}ms`);
+        }
+        if (name === "handoffDuration") {
+          document.documentElement.style.setProperty("--handoff-duration", `${value}ms`);
+        }
+        if (name === "exitDuration") {
+          document.documentElement.style.setProperty("--exit-duration", `${value}ms`);
+        }
+        if (name === "scrimOpacity") {
+          document.documentElement.style.setProperty("--scrim-opacity", String(value / 100));
+        }
+
+        const suffix = name === "scrimOpacity" ? "%" : " ms";
+        document.querySelector(`#${name}Value`).textContent = `${value}${suffix}`;
+      }
+
+      function applyPreset(name) {
+        const preset = PRESETS[name];
+        Object.entries(preset).forEach(([settingName, value]) => {
+          const input = document.querySelector(`#${settingName}`);
+          input.value = String(value);
+          updateSetting(settingName, value);
+        });
+        presetButtons.forEach((button) => {
+          button.classList.toggle("active", button.dataset.preset === name);
+        });
+      }
+
+      document.querySelectorAll('input[type="range"]').forEach((input) => {
+        input.addEventListener("input", () => {
+          updateSetting(input.id, input.value);
+          presetButtons.forEach((button) => button.classList.remove("active"));
+        });
+      });
+
+      presetButtons.forEach((button) => {
+        button.addEventListener("click", () => applyPreset(button.dataset.preset));
+      });
+
+      reducedMotion.addEventListener("change", () => {
+        device.classList.toggle("reduced-motion", reducedMotion.checked);
+      });
+
+      document.querySelector("#playFirstButton").addEventListener("click", () => {
+        playSequence({ countdownValues: [3, 2, 1], advanceStage: false });
+      });
+      document.querySelector("#playNextButton").addEventListener("click", () => {
+        playSequence({ countdownValues: [2, 1], advanceStage: true });
+      });
+      document.querySelector("#playRepeatButton").addEventListener("click", () => {
+        playSequence({ countdownValues: [], advanceStage: false });
+      });
+      document.querySelector("#resetButton").addEventListener("click", reset);
+      nextButton.addEventListener("click", () => {
+        if (stage < 6) playSequence({ countdownValues: [2, 1], advanceStage: true });
+      });
+      repeatButton.addEventListener("click", () => {
+        playSequence({ countdownValues: [], advanceStage: false });
+      });
+
+      renderProgress();
+      applyPreset("balanced");
+    </script>
+  </body>
+</html>

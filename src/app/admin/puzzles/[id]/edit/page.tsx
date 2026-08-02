@@ -5,7 +5,10 @@ import {
   type PuzzleFormValues,
 } from "../../../../../../components/admin/PuzzleForm";
 import { requireAdminSession } from "../../../../../../lib/adminAuth";
-import { getAdminPuzzleById } from "../../../../../../lib/adminPuzzles";
+import {
+  getActiveAdminEditors,
+  getAdminPuzzleById,
+} from "../../../../../../lib/adminPuzzles";
 import { SupabaseConfigError } from "../../../../../../lib/supabase/server";
 import type { Puzzle } from "../../../../../../types/puzzle";
 import { updatePuzzleAction } from "../../actions";
@@ -29,7 +32,7 @@ export default async function EditPuzzlePage({
 
   const { id } = await params;
   const resolvedSearchParams = await searchParams;
-  const { errorMessage, puzzle } = await loadPuzzle(id);
+  const { editorOptions, errorMessage, puzzle } = await loadPuzzle(id);
 
   if (errorMessage) {
     return (
@@ -79,6 +82,7 @@ export default async function EditPuzzlePage({
 
         <PuzzleForm
           action={action}
+          editorOptions={editorOptions}
           initialValues={mapPuzzleToFormValues(puzzle)}
           mode="edit"
         />
@@ -89,13 +93,20 @@ export default async function EditPuzzlePage({
 
 async function loadPuzzle(id: string) {
   try {
+    const [puzzle, editorOptions] = await Promise.all([
+      getAdminPuzzleById(id),
+      getActiveAdminEditors(),
+    ]);
+
     return {
+      editorOptions,
       errorMessage: "",
-      puzzle: await getAdminPuzzleById(id),
+      puzzle,
     };
   } catch (error) {
     if (error instanceof SupabaseConfigError) {
       return {
+        editorOptions: [],
         errorMessage:
           "Supabase admin config is missing. Add server-only Supabase env vars before editing puzzles.",
         puzzle: null,
@@ -105,6 +116,7 @@ async function loadPuzzle(id: string) {
     console.error(error);
 
     return {
+      editorOptions: [],
       errorMessage:
         "Could not load this puzzle right now. Check the database connection, then refresh.",
       puzzle: null,
@@ -122,6 +134,8 @@ function mapPuzzleToFormValues(puzzle: Puzzle): PuzzleFormValues {
     countsTowardPuzzleNumber: puzzle.countsTowardPuzzleNumber,
     date: puzzle.date,
     difficulty: puzzle.difficulty ?? "",
+    durationPresetId: puzzle.durationPresetId,
+    editorId: puzzle.editorId,
     isTest: puzzle.isTest,
     notes: puzzle.notes ?? "",
     previewStartSeconds: String(puzzle.previewStartSeconds),

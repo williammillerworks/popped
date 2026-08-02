@@ -1,3 +1,8 @@
+insert into public.editors (display_name)
+values ('Anita Lee Miller')
+on conflict (display_name) do update set
+  is_active = true;
+
 insert into public.puzzles (
   id,
   date,
@@ -5,6 +10,7 @@ insert into public.puzzles (
   status,
   is_test,
   counts_toward_puzzle_number,
+  editor_id,
   song_title_english,
   song_title_korean,
   artist_name,
@@ -14,6 +20,7 @@ insert into public.puzzles (
   source_country,
   preview_url,
   preview_start_seconds,
+  duration_preset_id,
   canonical_answer_english,
   canonical_answer_korean,
   accepted_answers,
@@ -27,6 +34,7 @@ insert into public.puzzles (
   'published',
   false,
   true,
+  (select id from public.editors where display_name = 'Anita Lee Miller'),
   'LOVE DIVE',
   '러브 다이브',
   'IVE',
@@ -36,6 +44,7 @@ insert into public.puzzles (
   null,
   '/audio/popped-demo-preview.wav',
   8.4,
+  'classic_v1',
   'LOVE DIVE',
   '러브 다이브',
   array['LOVE DIVE', 'lovedive', '러브 다이브', '러브다이브'],
@@ -49,6 +58,7 @@ on conflict (id) do update set
   status = excluded.status,
   is_test = excluded.is_test,
   counts_toward_puzzle_number = excluded.counts_toward_puzzle_number,
+  editor_id = excluded.editor_id,
   song_title_english = excluded.song_title_english,
   song_title_korean = excluded.song_title_korean,
   artist_name = excluded.artist_name,
@@ -58,6 +68,7 @@ on conflict (id) do update set
   source_country = excluded.source_country,
   preview_url = excluded.preview_url,
   preview_start_seconds = excluded.preview_start_seconds,
+  duration_preset_id = excluded.duration_preset_id,
   canonical_answer_english = excluded.canonical_answer_english,
   canonical_answer_korean = excluded.canonical_answer_korean,
   accepted_answers = excluded.accepted_answers,

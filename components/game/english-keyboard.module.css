@@ -1,0 +1,122 @@
+.keyboard {
+  width: 100%;
+  aspect-ratio: 62 / 35;
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  color: #000000;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0;
+  user-select: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+
+.key {
+  grid-column: span 2;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 6px;
+  background: #d2d4d8;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  text-transform: uppercase;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--popped-motion-press) ease,
+    transform var(--popped-motion-press) var(--popped-ease-out);
+}
+
+.key:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+.key:disabled:not(.disabledKey) {
+  cursor: default;
+}
+
+.key:focus-visible {
+  outline: 2px solid var(--popped-focus-ring);
+  outline-offset: 2px;
+}
+
+.homeRow .key:first-child {
+  grid-column: 2 / span 2;
+}
+
+.wideKey,
+.languageKey {
+  grid-column: span 3;
+}
+
+.spaceKey {
+  grid-column: span 13;
+}
+
+.enterKey {
+  grid-column: span 4;
+}
+
+.wideKey:not(.iconKey),
+.languageKey,
+.spaceKey,
+.enterKey {
+  font-size: 15px;
+}
+
+.iconKey {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.disabledKey {
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .key:not(:disabled):hover {
+    background: #c7c9ce;
+  }
+}
+
+@media (max-width: 359px) {
+  .keyboard,
+  .row {
+    gap: 5px;
+  }
+
+  .keyboard {
+    font-size: 17px;
+  }
+
+  .wideKey:not(.iconKey),
+  .languageKey,
+  .spaceKey,
+  .enterKey {
+    font-size: 13px;
+  }
+
+  .iconKey {
+    font-size: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .key {
+    transition: none;
+  }
+
+  .key:not(:disabled):active {
+    transform: none;
+  }
+}
