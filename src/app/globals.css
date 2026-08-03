@@ -21,6 +21,7 @@
   --popped-motion-feedback-exit: 180ms;
   --popped-motion-fast: 160ms;
   --popped-motion-ui: 220ms;
+  --popped-motion-screen-enter: 240ms;
   --popped-motion-emphasis: 280ms;
   --popped-ease-in: cubic-bezier(0.32, 0, 0.67, 0);
   --popped-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -78,6 +79,40 @@ body {
   pointer-events: none;
   animation: popped-view-exit var(--popped-motion-exit) var(--popped-ease-in)
     both;
+}
+
+.popped-view-transition-arrival.popped-view-transition-exit {
+  animation: none;
+}
+
+.popped-view-transition-arrival.popped-view-transition-exit
+  .popped-arrival-content {
+  pointer-events: none;
+  will-change: opacity, transform;
+  animation: popped-arrival-exit var(--popped-motion-fast) var(--popped-ease-in)
+    both;
+}
+
+.popped-view-transition-gameplay.popped-view-transition-enter {
+  animation: none;
+}
+
+.popped-view-transition-gameplay.popped-view-transition-enter
+  .popped-gameplay-entry-top,
+.popped-view-transition-gameplay.popped-view-transition-enter
+  .popped-gameplay-entry-main,
+.popped-view-transition-gameplay.popped-view-transition-enter
+  .popped-gameplay-entry-lower {
+  will-change: opacity, transform;
+  animation: popped-gameplay-content-enter var(--popped-motion-screen-enter)
+    var(--popped-ease-out) both;
+}
+
+.popped-view-transition-gameplay.popped-view-transition-enter
+  .popped-gameplay-entry-main,
+.popped-view-transition-gameplay.popped-view-transition-enter
+  .popped-gameplay-entry-lower {
+  animation-delay: 35ms;
 }
 
 .popped-arrival-shell {
@@ -383,6 +418,18 @@ body {
   }
 }
 
+@keyframes popped-arrival-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
 @media (max-height: 620px) {
   .popped-arrival-screen {
     padding-top: max(18px, env(safe-area-inset-top));
@@ -438,6 +485,7 @@ body {
   .popped-arrival-loading-content {
     transition: none;
   }
+
 }
 
 .popped-app-shell {
@@ -723,6 +771,18 @@ body {
   }
 }
 
+@keyframes popped-gameplay-content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes popped-view-exit {
   from {
     opacity: 1;
@@ -875,6 +935,11 @@ body {
   .popped-gameplay-overlay-exiting,
   .popped-view-transition-enter,
   .popped-view-transition-exit,
+  .popped-view-transition-arrival.popped-view-transition-exit
+    .popped-arrival-content,
+  .popped-gameplay-entry-top,
+  .popped-gameplay-entry-main,
+  .popped-gameplay-entry-lower,
   .popped-stage-snap,
   .popped-result-open,
   .popped-album-reveal,

@@ -87,6 +87,7 @@ const FEEDBACK_EXIT_MS = 180;
 const OVERLAY_VISUAL_TAIL_MS = 240;
 const OVERLAY_EXIT_MS = 220;
 const VIEW_EXIT_MS = 140;
+const ARRIVAL_EXIT_MS = 180;
 const GAMEPLAY_BUFFER_SAFETY_SECONDS = 0.5;
 const BUFFER_RANGE_TOLERANCE_SECONDS = 0.05;
 const ENTRY_GESTURE_FALLBACK_MS = 700;
@@ -511,7 +512,10 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
     };
   }, []);
 
-  function transitionToView(commitTransition: () => void) {
+  function transitionToView(
+    commitTransition: () => void,
+    exitDurationMs = VIEW_EXIT_MS,
+  ) {
     if (isViewTransitioningRef.current) {
       return;
     }
@@ -528,12 +532,12 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
       isViewTransitioningRef.current = false;
       setIsViewExiting(false);
       commitTransition();
-    }, VIEW_EXIT_MS);
+    }, exitDurationMs);
   }
 
   function requestGameEntryWithTransition(action: PendingEntryAction) {
     primeAudioForMobile();
-    requestGameEntry(action);
+    transitionToView(() => requestGameEntry(action), ARRIVAL_EXIT_MS);
   }
 
   useEffect(() => {
@@ -1301,9 +1305,15 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
     view: ReactNode,
     animateEntry = true,
   ) {
+    const transitionScope = viewKey.startsWith("arrival-")
+      ? "arrival"
+      : viewKey === "gameplay"
+        ? "gameplay"
+        : "default";
+
     return (
       <div
-        className={`popped-view-transition ${
+        className={`popped-view-transition popped-view-transition-${transitionScope} ${
           animateEntry ? "popped-view-transition-enter" : ""
         } ${isViewExiting ? "popped-view-transition-exit" : ""}`}
         key={viewKey}
@@ -1469,7 +1479,7 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
           playback={playback}
         />
       </GameplayScreen>,
-      false,
+      true,
     );
   }
 

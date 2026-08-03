@@ -67,7 +67,9 @@ export function GameplayScreen({
             className={styles.underlay}
             inert={locked}
           >
-            <header className={styles.header}>
+            <header
+              className={`${styles.header} popped-gameplay-entry-top`}
+            >
               <span aria-hidden="true" className={styles.morePlaceholder}>
                 More <span className={styles.chevron} />
               </span>
@@ -83,7 +85,9 @@ export function GameplayScreen({
 
             <div
               aria-hidden={isCorrect ? true : undefined}
-              className={`${styles.actions} ${isCorrect ? styles.actionsHidden : ""}`}
+              className={`${styles.actions} popped-gameplay-entry-lower ${
+                isCorrect ? styles.actionsHidden : ""
+              }`}
             >
               <button
                 className={styles.actionButton}
@@ -105,7 +109,9 @@ export function GameplayScreen({
               </button>
             </div>
 
-            <div className={styles.keyboardWrap}>
+            <div
+              className={`${styles.keyboardWrap} popped-gameplay-entry-lower`}
+            >
               <EnglishKeyboard
                 disabled={controlsLocked}
                 onSubmit={onSubmit}
@@ -130,7 +136,7 @@ function StageProgress({
   missCount: number;
 }) {
   return (
-    <div className={styles.progressRow}>
+    <div className={`${styles.progressRow} popped-gameplay-entry-top`}>
       <strong className={styles.stageLabel}>
         {currentStage === TOTAL_STAGES ? "Last Stage" : `Stage ${currentStage}`}
       </strong>
@@ -208,7 +214,7 @@ function GuessArea({
   }, [guess]);
 
   return (
-    <div className={styles.guessArea}>
+    <div className={`${styles.guessArea} popped-gameplay-entry-main`}>
       <div
         aria-live="polite"
         className={`${styles.toastSlot} ${
