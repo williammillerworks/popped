@@ -34,7 +34,11 @@ import {
   saveStoredSession,
   subscribeToStoredResultChanges,
 } from "../../lib/resultPersistence";
-import { isAutoplayBlocked, seekAudio } from "../../lib/audioPlayback";
+import {
+  isAutoplayBlocked,
+  prepareAudioForAudiblePlayback,
+  seekAudio,
+} from "../../lib/audioPlayback";
 import { trackAnalyticsEvent } from "../../lib/analytics";
 import { getResultPresentation } from "../../lib/result-presentation";
 import { getResultLabel } from "../../lib/scoring";
@@ -193,7 +197,7 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
   const hasRestoredStoredSessionRef = useRef(false);
   const hasEnteredGameplayRef = useRef(false);
   const isPrimingAudioRef = useRef(false);
-  const primingMutedStateRef = useRef(false);
+  const mobilePrimePromiseRef = useRef<Promise<void> | null>(null);
   const feedbackExitTimerRef = useRef<number | null>(null);
   const feedbackClearTimerRef = useRef<number | null>(null);
   const feedbackCompletionRef = useRef<(() => void) | null>(null);
@@ -344,7 +348,7 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
       }
 
       audio.pause();
-      audio.muted = primingMutedStateRef.current;
+      prepareAudioForAudiblePlayback(audio);
       isPrimingAudioRef.current = false;
 
       try {
@@ -532,7 +536,6 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
   }
 
   function requestGameEntryWithTransition(action: PendingEntryAction) {
-    primeAudioForMobile();
     requestGameEntry(action);
   }
 
@@ -663,7 +666,9 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
   function continueGame() {
     stopCurrentPlayback();
     hasEnteredGameplayRef.current = true;
-    setGameState("active");
+    setCountdownPlayback({ mode: "stage", stage: currentStage });
+    setCountdownValue(2);
+    setGameState("countdown");
     setGuess("");
     setFeedback(null);
     setAudioMessage(null);
@@ -675,6 +680,7 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
       status: "idle",
       message: `Stage ${currentStage} ready.`,
     });
+    primeAudioForMobile();
   }
 
   function submitGuess() {
@@ -919,6 +925,7 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
     }));
 
     try {
+      prepareAudioForAudiblePlayback(audio);
       await audio.play();
 
       if (activePlayIdRef.current !== playId) {
@@ -1010,6 +1017,7 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
         audio,
         puzzle.previewStartSeconds,
       );
+      prepareAudioForAudiblePlayback(audio);
       await audio.play();
 
       if (activePlayIdRef.current !== playId) {
@@ -1157,15 +1165,14 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
   function primeAudioForMobile() {
     const audio = audioRef.current;
 
-    if (!audio) {
+    if (!audio || mobilePrimePromiseRef.current) {
       return;
     }
 
     const expectedPlayId = activePlayIdRef.current;
-    const wasMuted = audio.muted;
     audio.muted = true;
 
-    void audio
+    const primePromise = audio
       .play()
       .then(() => {
         if (activePlayIdRef.current === expectedPlayId) {
@@ -1179,8 +1186,14 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
         }
       })
       .finally(() => {
-        audio.muted = wasMuted;
+        prepareAudioForAudiblePlayback(audio);
+
+        if (mobilePrimePromiseRef.current === primePromise) {
+          mobilePrimePromiseRef.current = null;
+        }
       });
+
+    mobilePrimePromiseRef.current = primePromise;
   }
 
   function primeAudioForGameplayBuffer() {
@@ -1191,7 +1204,6 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
     }
 
     isPrimingAudioRef.current = true;
-    primingMutedStateRef.current = audio.muted;
     audio.muted = true;
 
     try {
@@ -1206,7 +1218,7 @@ function PoppedGameSession({ puzzle }: { puzzle: TodayPuzzleResponse }) {
       }
 
       audio.pause();
-      audio.muted = primingMutedStateRef.current;
+      prepareAudioForAudiblePlayback(audio);
       isPrimingAudioRef.current = false;
       audio.load();
     });
