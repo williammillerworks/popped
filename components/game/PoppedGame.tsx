@@ -36,6 +36,7 @@ import {
 } from "../../lib/resultPersistence";
 import { isAutoplayBlocked, seekAudio } from "../../lib/audioPlayback";
 import { trackAnalyticsEvent } from "../../lib/analytics";
+import { initializeLocalPlayerProfile } from "../../lib/player-persistence";
 import { getResultPresentation } from "../../lib/result-presentation";
 import { getResultLabel } from "../../lib/scoring";
 import type { TodayPuzzleResponse } from "../../lib/puzzles";
@@ -175,6 +176,12 @@ export function PoppedGame({
     getClientHydrationSnapshot,
     getServerHydrationSnapshot,
   );
+
+  useEffect(() => {
+    if (hasHydrated) {
+      initializeLocalPlayerProfile();
+    }
+  }, [hasHydrated]);
 
   const selectedPuzzle = hasHydrated
     ? selectArrivalPuzzle(puzzle, previousPuzzle)
