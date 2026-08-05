@@ -10,6 +10,12 @@ export function seekAudio(audio: HTMLAudioElement, startSeconds: number) {
   });
 }
 
+export function prepareAudioForAudiblePlayback(
+  audio: Pick<HTMLMediaElement, "muted">,
+) {
+  audio.muted = false;
+}
+
 export function waitForAudioMetadata(audio: HTMLAudioElement) {
   if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
     return Promise.resolve();
@@ -43,6 +49,6 @@ export function waitForAudioMetadata(audio: HTMLAudioElement) {
 export function isAutoplayBlocked(error: unknown) {
   return (
     error instanceof DOMException &&
-    (error.name === "NotAllowedError" || error.name === "AbortError")
+    error.name === "NotAllowedError"
   );
 }
