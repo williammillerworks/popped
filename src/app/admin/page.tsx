@@ -8,10 +8,6 @@ import {
   signInAdminAction,
   signOutAdminAction,
 } from "./actions";
-import {
-  AdminIdentity,
-  AdminSignOutButton,
-} from "../../../components/analytics/PageViewTracker";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +28,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   return (
     <main className="min-h-dvh bg-[#181411] px-5 py-8 text-[#fffaf1]">
-      <AdminIdentity email={session.email} />
       <section className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-md flex-col justify-between rounded-[2rem] border border-white/10 bg-[#211b17] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
         <div className="space-y-3">
           <p className="font-mono text-sm uppercase tracking-[0.35em] text-[#e4aa73]">
@@ -60,10 +55,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </Link>
         </div>
 
-        <AdminSignOutButton
-          action={signOutAdminAction}
-          className="h-12 w-full rounded-full border border-white/15 px-5 text-sm font-black text-[#fffaf1] transition hover:-translate-y-0.5 hover:bg-white/10"
-        />
+        <form action={signOutAdminAction}>
+          <button
+            className="h-12 w-full rounded-full border border-white/15 px-5 text-sm font-black text-[#fffaf1] transition hover:-translate-y-0.5 hover:bg-white/10"
+            type="submit"
+          >
+            Sign out
+          </button>
+        </form>
       </section>
     </main>
   );

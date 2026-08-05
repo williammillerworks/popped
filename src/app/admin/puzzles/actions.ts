@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireAdminSession } from "../../../../lib/adminAuth";
-import { captureAdminEvent } from "../../../../lib/posthog-server";
 import {
   createAdminPuzzle,
   updateAdminPuzzle,
@@ -22,7 +21,7 @@ export async function createPuzzleAction(
 ): Promise<PuzzleFormState> {
   void previousState;
 
-  const session = await requireAdminSession();
+  await requireAdminSession();
 
   const parsed = parsePuzzleFormData(formData);
 
@@ -54,15 +53,6 @@ export async function createPuzzleAction(
     };
   }
 
-  await captureAdminEvent({
-    distinctId: session.email,
-    event: "puzzle_created",
-    properties: {
-      is_test: parsed.puzzle.is_test ?? false,
-      status: parsed.puzzle.status ?? "draft",
-    },
-  });
-
   revalidatePath("/admin/puzzles");
   redirect(`/admin/puzzles/${puzzleId}/edit?saved=created`);
 }
@@ -74,7 +64,7 @@ export async function updatePuzzleAction(
 ): Promise<PuzzleFormState> {
   void previousState;
 
-  const session = await requireAdminSession();
+  await requireAdminSession();
 
   const parsed = parsePuzzleFormData(formData);
 
@@ -84,14 +74,6 @@ export async function updatePuzzleAction(
 
   try {
     await updateAdminPuzzle(puzzleId, parsed.puzzle);
-    await captureAdminEvent({
-      distinctId: session.email,
-      event: "puzzle_updated",
-      properties: {
-        is_test: parsed.puzzle.is_test ?? false,
-        status: parsed.puzzle.status ?? "draft",
-      },
-    });
 
     revalidatePath("/admin/puzzles");
     revalidatePath(`/admin/puzzles/${puzzleId}/edit`);

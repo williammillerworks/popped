@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { AdminSignOutButton } from "../../../../components/analytics/PageViewTracker";
 import { requireAdminSession } from "../../../../lib/adminAuth";
 import { getAdminPuzzleList } from "../../../../lib/adminPuzzles";
 import { SupabaseConfigError } from "../../../../lib/supabase/server";
@@ -32,10 +31,14 @@ export default async function AdminPuzzlesPage() {
             </p>
           </div>
 
-          <AdminSignOutButton
-            action={signOutAdminAction}
-            className="h-11 rounded-full border border-white/15 px-5 text-sm font-black text-[#fffaf1] transition hover:-translate-y-0.5 hover:bg-white/10"
-          />
+          <form action={signOutAdminAction}>
+            <button
+              className="h-11 rounded-full border border-white/15 px-5 text-sm font-black text-[#fffaf1] transition hover:-translate-y-0.5 hover:bg-white/10"
+              type="submit"
+            >
+              Sign out
+            </button>
+          </form>
         </div>
 
         <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between">

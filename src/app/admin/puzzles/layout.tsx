@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import { AdminIdentity } from "../../../../components/analytics/PageViewTracker";
 import { requireAdminSession } from "../../../../lib/adminAuth";
 
 export const dynamic = "force-dynamic";
@@ -10,12 +9,7 @@ export default async function AdminPuzzlesLayout({
 }: {
   children: ReactNode;
 }) {
-  const session = await requireAdminSession();
+  await requireAdminSession();
 
-  return (
-    <>
-      <AdminIdentity email={session.email} />
-      {children}
-    </>
-  );
+  return children;
 }
