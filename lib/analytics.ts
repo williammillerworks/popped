@@ -1,3 +1,5 @@
+import posthog from "posthog-js";
+
 export type AnalyticsEventName =
   | "answer_revealed"
   | "audio_error"
@@ -16,20 +18,6 @@ export type AnalyticsEventName =
 type AnalyticsValue = boolean | number | string | null;
 export type AnalyticsPayload = Record<string, AnalyticsValue | undefined>;
 
-type AnalyticsEnvelope = {
-  name: AnalyticsEventName;
-  payload: Record<string, AnalyticsValue>;
-  timestamp: string;
-};
-
-type VercelAnalyticsWindow = Window & {
-  va?: (
-    action: "event",
-    name: AnalyticsEventName,
-    payload?: Record<string, AnalyticsValue>,
-  ) => void;
-};
-
 export function trackAnalyticsEvent(
   name: AnalyticsEventName,
   payload: AnalyticsPayload = {},
@@ -39,36 +27,7 @@ export function trackAnalyticsEvent(
   }
 
   try {
-    const sanitizedPayload = sanitizePayload(payload);
-    const analyticsWindow = window as VercelAnalyticsWindow;
-
-    if (analyticsWindow.va) {
-      analyticsWindow.va("event", name, sanitizedPayload);
-      return;
-    }
-
-    const envelope: AnalyticsEnvelope = {
-      name,
-      payload: sanitizedPayload,
-      timestamp: new Date().toISOString(),
-    };
-    const body = JSON.stringify(envelope);
-
-    if (navigator.sendBeacon) {
-      const blob = new Blob([body], { type: "application/json" });
-      navigator.sendBeacon("/api/analytics", blob);
-      return;
-    }
-
-    void fetch("/api/analytics", {
-      body,
-      cache: "no-store",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      keepalive: true,
-      method: "POST",
-    });
+    posthog.capture(name, sanitizePayload(payload));
   } catch {
     // Analytics should never block the game.
   }
