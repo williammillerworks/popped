@@ -1,9 +1,18 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
   PuzzleForm,
   type PuzzleFormValues,
 } from "../../../../../../components/admin/PuzzleForm";
+import {
+  AdminAlert,
+  ADMIN_BUTTON_SECONDARY,
+  AdminIcon,
+  AdminPageHeader,
+  AdminPanel,
+  AdminShell,
+} from "../../../../../../components/admin/admin-ui";
 import { requireAdminSession } from "../../../../../../lib/adminAuth";
 import {
   getActiveAdminEditors,
@@ -11,6 +20,7 @@ import {
 } from "../../../../../../lib/adminPuzzles";
 import { SupabaseConfigError } from "../../../../../../lib/supabase/server";
 import type { Puzzle } from "../../../../../../types/puzzle";
+import { signOutAdminAction } from "../../../actions";
 import { updatePuzzleAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -28,29 +38,37 @@ export default async function EditPuzzlePage({
   params,
   searchParams,
 }: EditPuzzlePageProps) {
-  await requireAdminSession();
-
+  const session = await requireAdminSession();
   const { id } = await params;
   const resolvedSearchParams = await searchParams;
   const { editorOptions, errorMessage, puzzle } = await loadPuzzle(id);
 
   if (errorMessage) {
     return (
-      <main className="min-h-dvh bg-[#181411] px-5 py-8 text-[#fffaf1]">
-        <section className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-6xl flex-col gap-6 rounded-[2rem] border border-white/10 bg-[#211b17] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
-          <div className="space-y-3">
-            <p className="font-mono text-sm uppercase tracking-[0.35em] text-[#e4aa73]">
-              Admin
-            </p>
-            <h1 className="text-4xl font-black tracking-[-0.05em]">
-              Edit Puzzle
-            </h1>
-            <p className="max-w-xl text-base leading-7 text-[#d8c8b7]">
+      <AdminShell
+        active="puzzles"
+        email={session.email}
+        signOutAction={signOutAdminAction}
+      >
+        <div className="grid gap-6">
+          <AdminPageHeader
+            action={
+              <Link className={ADMIN_BUTTON_SECONDARY} href="/admin/puzzles">
+                <AdminIcon name="arrow-left" size={17} />
+                Back to puzzles
+              </Link>
+            }
+            description="The puzzle data could not be opened, so no editable fields are shown."
+            eyebrow="Puzzles"
+            title="Edit puzzle"
+          />
+          <AdminPanel className="p-5 sm:p-6">
+            <AdminAlert title="Puzzle unavailable" variant="error">
               {errorMessage}
-            </p>
-          </div>
-        </section>
-      </main>
+            </AdminAlert>
+          </AdminPanel>
+        </div>
+      </AdminShell>
     );
   }
 
@@ -61,24 +79,36 @@ export default async function EditPuzzlePage({
   const action = updatePuzzleAction.bind(null, puzzle.id);
 
   return (
-    <main className="min-h-dvh bg-[#181411] px-5 py-8 text-[#fffaf1]">
-      <section className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-6xl flex-col gap-6 rounded-[2rem] border border-white/10 bg-[#211b17] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
-        <div className="space-y-3">
-          <p className="font-mono text-sm uppercase tracking-[0.35em] text-[#e4aa73]">
-            Admin
-          </p>
-          <h1 className="text-4xl font-black tracking-[-0.05em]">
-            Edit Puzzle
-          </h1>
-          <p className="max-w-xl text-base leading-7 text-[#d8c8b7]">
-            Editing {puzzle.songTitleEnglish} by {puzzle.artistName}.
-          </p>
-          {resolvedSearchParams?.saved === "created" ? (
-            <p className="inline-flex rounded-full bg-[#d9f8c4] px-4 py-2 text-sm font-black text-[#244512]">
-              Puzzle created. Keep polishing it here.
-            </p>
-          ) : null}
-        </div>
+    <AdminShell
+      active="puzzles"
+      email={session.email}
+      signOutAction={signOutAdminAction}
+    >
+      <div className="grid gap-6">
+        <AdminPageHeader
+          action={
+            <Link className={ADMIN_BUTTON_SECONDARY} href="/admin/puzzles">
+              <AdminIcon name="arrow-left" size={17} />
+              Back to puzzles
+            </Link>
+          }
+          description={
+            <>
+              Editing <strong className="font-semibold text-admin-text">{puzzle.songTitleEnglish}</strong>{" "}
+              by <strong className="font-semibold text-admin-text">{puzzle.artistName}</strong>.
+              Changes affect the live clue when this puzzle is published.
+            </>
+          }
+          eyebrow={`Puzzle ${puzzle.puzzleNumber ? `#${puzzle.puzzleNumber}` : "draft"}`}
+          title="Edit puzzle"
+        />
+
+        {resolvedSearchParams?.saved === "created" ? (
+          <AdminAlert title="Puzzle created" variant="success">
+            The draft is ready. Continue polishing the metadata and audio range
+            here.
+          </AdminAlert>
+        ) : null}
 
         <PuzzleForm
           action={action}
@@ -86,8 +116,8 @@ export default async function EditPuzzlePage({
           initialValues={mapPuzzleToFormValues(puzzle)}
           mode="edit"
         />
-      </section>
-    </main>
+      </div>
+    </AdminShell>
   );
 }
 

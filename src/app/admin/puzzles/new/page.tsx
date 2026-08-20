@@ -1,36 +1,83 @@
+import Link from "next/link";
+
 import { PuzzleForm } from "../../../../../components/admin/PuzzleForm";
+import {
+  AdminAlert,
+  ADMIN_BUTTON_SECONDARY,
+  AdminIcon,
+  AdminPageHeader,
+  AdminPanel,
+  AdminShell,
+} from "../../../../../components/admin/admin-ui";
 import { requireAdminSession } from "../../../../../lib/adminAuth";
 import { getActiveAdminEditors } from "../../../../../lib/adminPuzzles";
+import { SupabaseConfigError } from "../../../../../lib/supabase/server";
+import { signOutAdminAction } from "../../actions";
 import { createPuzzleAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewPuzzlePage() {
-  await requireAdminSession();
-  const editorOptions = await getActiveAdminEditors();
+  const session = await requireAdminSession();
+  const { editorOptions, errorMessage } = await loadEditorOptions();
 
   return (
-    <main className="min-h-dvh bg-[#181411] px-5 py-8 text-[#fffaf1]">
-      <section className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-6xl flex-col gap-6 rounded-[2rem] border border-white/10 bg-[#211b17] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
-        <div className="space-y-3">
-          <p className="font-mono text-sm uppercase tracking-[0.35em] text-[#e4aa73]">
-            Admin
-          </p>
-          <h1 className="text-4xl font-black tracking-[-0.05em]">
-            Create Puzzle
-          </h1>
-          <p className="max-w-xl text-base leading-7 text-[#d8c8b7]">
-            Search music, choose the right preview, add accepted English and
-            Korean aliases, then save the puzzle draft.
-          </p>
-        </div>
-
-        <PuzzleForm
-          action={createPuzzleAction}
-          editorOptions={editorOptions}
-          mode="create"
+    <AdminShell
+      active="create"
+      email={session.email}
+      signOutAction={signOutAdminAction}
+    >
+      <div className="grid gap-6">
+        <AdminPageHeader
+          action={
+            <Link className={ADMIN_BUTTON_SECONDARY} href="/admin/puzzles">
+              <AdminIcon name="arrow-left" size={17} />
+              Back to puzzles
+            </Link>
+          }
+          description="Search for the exact track, verify its preview, and save a test-safe draft before scheduling it for players."
+          eyebrow="Puzzles"
+          title="Create a puzzle"
         />
-      </section>
-    </main>
+        {errorMessage ? (
+          <AdminPanel className="p-5 sm:p-6">
+            <AdminAlert title="Puzzle editor unavailable" variant="error">
+              {errorMessage}
+            </AdminAlert>
+          </AdminPanel>
+        ) : (
+          <PuzzleForm
+            action={createPuzzleAction}
+            editorOptions={editorOptions}
+            mode="create"
+          />
+        )}
+      </div>
+    </AdminShell>
   );
+}
+
+async function loadEditorOptions() {
+  try {
+    return {
+      editorOptions: await getActiveAdminEditors(),
+      errorMessage: "",
+    };
+  } catch (error) {
+    if (error instanceof SupabaseConfigError) {
+      return {
+        editorOptions: [],
+        errorMessage:
+          "Supabase admin config is missing. Add the server-only Supabase environment variables, then reload this page.",
+      };
+    }
+
+    console.error(error);
+
+    return {
+      editorOptions: [],
+      errorMessage:
+        "Editor options could not be loaded. Check the database connection, then reload this page.",
+    };
+  }
 }

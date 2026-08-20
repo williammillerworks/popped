@@ -1,10 +1,20 @@
 import Link from "next/link";
 
+import {
+  AdminAlert,
+  ADMIN_BUTTON_GHOST,
+  ADMIN_BUTTON_PRIMARY,
+  ADMIN_BUTTON_SECONDARY,
+  AdminIcon,
+  AdminPageHeader,
+  AdminPanel,
+  AdminShell,
+} from "../../../../components/admin/admin-ui";
 import { requireAdminSession } from "../../../../lib/adminAuth";
 import { getAdminPuzzleList } from "../../../../lib/adminPuzzles";
 import { SupabaseConfigError } from "../../../../lib/supabase/server";
-import { signOutAdminAction } from "../actions";
 import type { Puzzle, PuzzleStatus } from "../../../../types/puzzle";
+import { signOutAdminAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,260 +25,305 @@ export default async function AdminPuzzlesPage() {
   const missingDays = getMissingPublicPuzzleDays(puzzles);
 
   return (
-    <main className="min-h-dvh bg-[#181411] px-5 py-8 text-[#fffaf1]">
-      <section className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-6xl flex-col gap-6 rounded-[2rem] border border-white/10 bg-[#211b17] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-3">
-            <p className="font-mono text-sm uppercase tracking-[0.35em] text-[#e4aa73]">
-              Admin
-            </p>
-            <h1 className="text-4xl font-black tracking-[-0.05em]">
-              Puzzle Studio
-            </h1>
-            <p className="max-w-xl text-base leading-7 text-[#d8c8b7]">
-              Create, edit, and review POPPED puzzle drafts. Signed in as{" "}
-              <span className="font-bold text-[#fffaf1]">{session.email}</span>.
-            </p>
-          </div>
-
-          <form action={signOutAdminAction}>
-            <button
-              className="h-11 rounded-full border border-white/15 px-5 text-sm font-black text-[#fffaf1] transition hover:-translate-y-0.5 hover:bg-white/10"
-              type="submit"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-
-        <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#e4aa73]">
-              Create/Edit
-            </p>
-            <p className="mt-2 text-sm font-semibold text-[#d8c8b7]">
-              Test puzzles default to not counting toward public numbering.
-            </p>
-          </div>
-          <Link
-            className="inline-flex h-11 items-center justify-center rounded-full bg-[#fffaf1] px-5 text-sm font-black text-[#211b17] transition hover:-translate-y-0.5"
-            href="/admin/puzzles/new"
-          >
-            Create puzzle
-          </Link>
-        </div>
+    <AdminShell
+      active="puzzles"
+      email={session.email}
+      signOutAction={signOutAdminAction}
+    >
+      <div className="grid gap-6">
+        <AdminPageHeader
+          action={
+            <Link className={ADMIN_BUTTON_PRIMARY} href="/admin/puzzles/new">
+              <AdminIcon name="plus" size={17} />
+              Create puzzle
+            </Link>
+          }
+          description="Review the publishing pipeline, schedule coverage, and editorial state of every audio puzzle."
+          eyebrow="Catalog"
+          title="Puzzle schedule"
+        />
 
         {errorMessage ? (
-          <p className="rounded-3xl bg-[#4b241b] px-5 py-4 text-sm font-bold text-[#ffd9ca]">
+          <AdminAlert title="Puzzles could not be loaded" variant="error">
             {errorMessage}
-          </p>
+          </AdminAlert>
         ) : null}
 
-        <div className="grid gap-3 sm:grid-cols-4">
+        <section aria-label="Puzzle summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <SummaryCard label="All puzzles" value={puzzles.length} />
-          <SummaryCard label="Published" value={summary.published} />
-          <SummaryCard label="Scheduled" value={summary.scheduled} />
-          <SummaryCard label="Tests" value={summary.tests} />
-        </div>
+          <SummaryCard label="Published" tone="success" value={summary.published} />
+          <SummaryCard label="Scheduled" tone="accent" value={summary.scheduled} />
+          <SummaryCard label="Test entries" value={summary.tests} />
+        </section>
 
         {missingDays.length > 0 ? (
-          <section className="rounded-3xl border border-[#e4aa73]/30 bg-[#33251d] p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#e4aa73]">
-                  Missing Days
-                </p>
-                <p className="mt-2 text-sm font-semibold leading-6 text-[#d8c8b7]">
-                  Real scheduled/published puzzles are missing for these dates
-                  in the current list range.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {missingDays.map((date) => (
-                  <span
-                    className="rounded-full bg-[#fffaf1] px-3 py-1 text-xs font-black text-[#211b17]"
-                    key={date}
-                  >
-                    {date}
-                  </span>
-                ))}
-              </div>
+          <AdminAlert title={`${missingDays.length} schedule gaps found`} variant="warning">
+            <p>
+              Public scheduled or published puzzles are missing on these dates
+              within the current list range.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {missingDays.map((date) => (
+                <time
+                  className="rounded-md border border-admin-warning/15 bg-admin-surface/70 px-2 py-1 font-mono text-xs font-semibold tabular-nums"
+                  dateTime={date}
+                  key={date}
+                >
+                  {date}
+                </time>
+              ))}
             </div>
-          </section>
+          </AdminAlert>
         ) : null}
 
-        <div className="overflow-hidden rounded-3xl border border-white/10">
-          <div className="grid grid-cols-[1fr_auto] gap-3 bg-white/[0.04] px-5 py-4 text-xs font-black uppercase tracking-[0.18em] text-[#e4aa73] lg:grid-cols-[7rem_4rem_1.4fr_1fr_7rem_8rem_7rem_auto]">
-            <span>Date</span>
-            <span className="hidden lg:block">#</span>
-            <span>Song</span>
-            <span className="hidden lg:block">Artist</span>
-            <span className="hidden lg:block">Status</span>
-            <span className="hidden lg:block">State</span>
-            <span className="hidden lg:block">Difficulty</span>
-            <span>Edit</span>
-          </div>
+        {puzzles.length > 0 ? (
+          <AdminPanel className="overflow-hidden">
+            <div className="flex flex-col gap-2 border-b border-admin-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <div>
+                <h2 className="text-base font-semibold tracking-[-0.01em]">
+                  All puzzles
+                </h2>
+                <p className="mt-0.5 text-sm text-admin-muted">
+                  Test puzzles do not count unless explicitly converted.
+                </p>
+              </div>
+              <span className="text-xs font-medium tabular-nums text-admin-subtle">
+                {puzzles.length} {puzzles.length === 1 ? "record" : "records"}
+              </span>
+            </div>
 
-          {puzzles.length > 0 ? (
-            <div className="divide-y divide-white/10">
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[58rem] border-collapse text-left text-sm">
+                <caption className="sr-only">
+                  Puzzles with date, number, song, artist, status, publishing
+                  state, difficulty, and edit action
+                </caption>
+                <thead>
+                  <tr className="border-b border-admin-border bg-admin-surface-subtle/60 text-xs font-medium text-admin-muted">
+                    <th className="px-5 py-3" scope="col">Date</th>
+                    <th className="px-3 py-3 text-center" scope="col">No.</th>
+                    <th className="px-3 py-3" scope="col">Song</th>
+                    <th className="px-3 py-3" scope="col">Artist</th>
+                    <th className="px-3 py-3" scope="col">Status</th>
+                    <th className="px-3 py-3" scope="col">State</th>
+                    <th className="px-3 py-3" scope="col">Difficulty</th>
+                    <th className="px-5 py-3 text-end" scope="col">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-admin-border">
+                  {puzzles.map((puzzle) => (
+                    <tr
+                      className="group transition-colors duration-150 hover:bg-admin-surface-subtle/50"
+                      key={puzzle.id}
+                    >
+                      <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs tabular-nums text-admin-muted">
+                        <time dateTime={puzzle.date}>{puzzle.date}</time>
+                      </td>
+                      <td className="px-3 py-3.5 text-center tabular-nums">
+                        <PuzzleNumberBadge puzzle={puzzle} />
+                      </td>
+                      <td className="max-w-56 px-3 py-3.5">
+                        <p
+                          className="truncate font-medium text-admin-text"
+                          title={puzzle.songTitleEnglish}
+                        >
+                          {puzzle.songTitleEnglish}
+                        </p>
+                      </td>
+                      <td className="max-w-44 px-3 py-3.5">
+                        <p className="truncate text-admin-muted" title={puzzle.artistName}>
+                          {puzzle.artistName}
+                        </p>
+                      </td>
+                      <td className="px-3 py-3.5"><StatusBadge status={puzzle.status} /></td>
+                      <td className="px-3 py-3.5"><CountingBadge puzzle={puzzle} /></td>
+                      <td className="px-3 py-3.5"><DifficultyBadge difficulty={puzzle.difficulty} /></td>
+                      <td className="px-5 py-3.5 text-end">
+                        <Link
+                          aria-label={`Edit ${puzzle.songTitleEnglish}`}
+                          className={ADMIN_BUTTON_GHOST}
+                          href={`/admin/puzzles/${puzzle.id}/edit`}
+                        >
+                          Edit
+                          <AdminIcon name="chevron-right" size={15} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="divide-y divide-admin-border md:hidden">
               {puzzles.map((puzzle) => (
-                <article
-                  className={`grid grid-cols-[1fr_auto] gap-4 px-5 py-4 text-sm lg:grid-cols-[7rem_4rem_1.4fr_1fr_7rem_8rem_7rem_auto] lg:items-center ${
-                    puzzle.isTest ? "bg-[#2b211d]" : ""
-                  }`}
-                  key={puzzle.id}
-                >
-                  <div className="font-mono text-[#d8c8b7]">
-                    {puzzle.date}
-                    <span className="mt-2 block lg:hidden">
-                      <PuzzleNumberBadge puzzle={puzzle} />
-                    </span>
-                  </div>
-                  <div className="hidden lg:block">
-                    <PuzzleNumberBadge puzzle={puzzle} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-black text-[#fffaf1]">
-                      {puzzle.songTitleEnglish}
-                    </p>
-                    <p className="truncate font-medium text-[#d8c8b7] lg:hidden">
-                      {puzzle.artistName}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2 lg:hidden">
-                      <StatusBadge status={puzzle.status} />
-                      <CountingBadge puzzle={puzzle} />
-                      <DifficultyBadge difficulty={puzzle.difficulty} />
+                <article className="grid gap-4 p-4" key={puzzle.id}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-semibold" title={puzzle.songTitleEnglish}>
+                        {puzzle.songTitleEnglish}
+                      </h3>
+                      <p className="mt-0.5 truncate text-sm text-admin-muted" title={puzzle.artistName}>
+                        {puzzle.artistName}
+                      </p>
                     </div>
-                  </div>
-                  <p className="hidden truncate font-semibold text-[#d8c8b7] lg:block">
-                    {puzzle.artistName}
-                  </p>
-                  <div className="hidden lg:block">
                     <StatusBadge status={puzzle.status} />
                   </div>
-                  <div className="hidden lg:block">
-                    <CountingBadge puzzle={puzzle} />
-                  </div>
-                  <div className="hidden lg:block">
-                    <DifficultyBadge difficulty={puzzle.difficulty} />
-                  </div>
+
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl bg-admin-surface-subtle/70 p-3 text-sm">
+                    <MobileMeta label="Date">
+                      <time className="font-mono text-xs tabular-nums" dateTime={puzzle.date}>
+                        {puzzle.date}
+                      </time>
+                    </MobileMeta>
+                    <MobileMeta label="Puzzle number"><PuzzleNumberBadge puzzle={puzzle} /></MobileMeta>
+                    <MobileMeta label="Publishing state"><CountingBadge puzzle={puzzle} /></MobileMeta>
+                    <MobileMeta label="Difficulty"><DifficultyBadge difficulty={puzzle.difficulty} /></MobileMeta>
+                  </dl>
+
                   <Link
-                    className="inline-flex h-10 items-center justify-center rounded-full border border-white/15 px-4 text-sm font-black text-[#fffaf1] transition hover:-translate-y-0.5 hover:bg-white/10"
+                    className={`${ADMIN_BUTTON_SECONDARY} w-full`}
                     href={`/admin/puzzles/${puzzle.id}/edit`}
                   >
-                    Edit
+                    Edit puzzle
+                    <AdminIcon name="chevron-right" size={16} />
                   </Link>
                 </article>
               ))}
             </div>
-          ) : (
-            <div className="px-5 py-8 text-sm font-semibold text-[#d8c8b7]">
-              No puzzles yet. Create the first one when you&apos;re ready.
-            </div>
-          )}
-        </div>
-      </section>
-    </main>
+          </AdminPanel>
+        ) : (
+          <AdminPanel className="px-5 py-14 text-center sm:px-8">
+            <span className="mx-auto grid size-11 place-items-center rounded-xl bg-admin-accent-soft text-admin-accent">
+              <AdminIcon name="music" size={20} />
+            </span>
+            <h2 className="mt-5 text-lg font-semibold">No puzzles yet</h2>
+            <p className="mx-auto mt-2 max-w-[44ch] text-pretty text-sm leading-6 text-admin-muted">
+              Create the first draft to start the schedule. New puzzles begin as
+              test entries and do not affect public numbering.
+            </p>
+            <Link className={`${ADMIN_BUTTON_PRIMARY} mt-5`} href="/admin/puzzles/new">
+              <AdminIcon name="plus" size={17} />
+              Create the first puzzle
+            </Link>
+          </AdminPanel>
+        )}
+      </div>
+    </AdminShell>
+  );
+}
+
+function MobileMeta({ children, label }: { children: React.ReactNode; label: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs font-medium text-admin-subtle">{label}</dt>
+      <dd className="mt-1 text-admin-text">{children}</dd>
+    </div>
   );
 }
 
 async function loadPuzzles() {
   try {
-    return {
-      errorMessage: "",
-      puzzles: await getAdminPuzzleList(),
-    };
+    return { errorMessage: "", puzzles: await getAdminPuzzleList() };
   } catch (error) {
     if (error instanceof SupabaseConfigError) {
       return {
         errorMessage:
-          "Supabase admin config is missing. Add server-only Supabase env vars to create and edit puzzles.",
+          "Supabase admin config is missing. Add server-only Supabase environment variables to create and edit puzzles.",
         puzzles: [],
       };
     }
 
     console.error(error);
-
     return {
-      errorMessage: "Could not load puzzles right now.",
+      errorMessage:
+        "The puzzle catalog is unavailable right now. Check the database connection, then refresh.",
       puzzles: [],
     };
   }
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
+function SummaryCard({
+  label,
+  tone = "neutral",
+  value,
+}: {
+  label: string;
+  tone?: "accent" | "neutral" | "success";
+  value: number;
+}) {
+  const toneClass = {
+    accent: "bg-admin-accent-soft text-admin-accent",
+    neutral: "bg-admin-surface-subtle text-admin-muted",
+    success: "bg-admin-success-soft text-admin-success",
+  }[tone];
+
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#e4aa73]">
+    <AdminPanel className="p-4 sm:p-5">
+      <div className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${toneClass}`}>
         {label}
+      </div>
+      <p className="mt-4 text-3xl font-semibold tracking-[-0.04em] tabular-nums">
+        {value}
       </p>
-      <p className="mt-3 text-3xl font-black tracking-[-0.05em]">{value}</p>
-    </div>
+    </AdminPanel>
+  );
+}
+
+function Badge({ children, className }: { children: React.ReactNode; className: string }) {
+  return (
+    <span className={`inline-flex min-h-6 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-xs font-medium ${className}`}>
+      {children}
+    </span>
   );
 }
 
 function PuzzleNumberBadge({ puzzle }: { puzzle: Puzzle }) {
   if (puzzle.puzzleNumber === null) {
-    return (
-      <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-black text-[#d8c8b7]">
-        No #
-      </span>
-    );
+    return <Badge className="bg-admin-surface-subtle text-admin-subtle">—</Badge>;
   }
 
   return (
-    <span className="inline-flex rounded-full bg-[#fffaf1] px-3 py-1 text-xs font-black text-[#211b17]">
-      #{puzzle.puzzleNumber}
-    </span>
+    <Badge className="bg-admin-surface-subtle text-admin-text">
+      <span className="tabular-nums">#{puzzle.puzzleNumber}</span>
+    </Badge>
   );
 }
 
 function StatusBadge({ status }: { status: PuzzleStatus }) {
   const classNameByStatus: Record<PuzzleStatus, string> = {
-    archived: "bg-white/10 text-[#d8c8b7]",
-    draft: "bg-[#3a3028] text-[#f3d8bc]",
-    published: "bg-[#d9f8c4] text-[#244512]",
-    scheduled: "bg-[#d8ecff] text-[#153e63]",
+    archived: "bg-admin-surface-subtle text-admin-muted",
+    draft: "bg-admin-warning-soft text-admin-warning",
+    published: "bg-admin-success-soft text-admin-success",
+    scheduled: "bg-admin-accent-soft text-admin-accent",
   };
 
   return (
-    <span
-      className={`inline-flex rounded-full px-3 py-1 text-xs font-black capitalize ${classNameByStatus[status]}`}
-    >
-      {status}
-    </span>
+    <Badge className={classNameByStatus[status]}>
+      <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+      <span className="capitalize">{status}</span>
+    </Badge>
   );
 }
 
 function CountingBadge({ puzzle }: { puzzle: Puzzle }) {
   if (puzzle.isTest) {
-    return (
-      <span className="inline-flex rounded-full border border-[#e4aa73]/40 px-3 py-1 text-xs font-black text-[#e4aa73]">
-        Test
-      </span>
-    );
+    return <Badge className="bg-admin-warning-soft text-admin-warning">Test</Badge>;
   }
 
   if (!puzzle.countsTowardPuzzleNumber) {
-    return (
-      <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-black text-[#d8c8b7]">
-        Not counting
-      </span>
-    );
+    return <Badge className="bg-admin-surface-subtle text-admin-muted">Not counting</Badge>;
   }
 
-  return (
-    <span className="inline-flex rounded-full bg-[#fffaf1] px-3 py-1 text-xs font-black text-[#211b17]">
-      Counting
-    </span>
-  );
+  return <Badge className="bg-admin-success-soft text-admin-success">Counting</Badge>;
 }
 
 function DifficultyBadge({ difficulty }: { difficulty: Puzzle["difficulty"] }) {
   return (
-    <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-black text-[#d8c8b7]">
-      {difficulty ? difficulty.replace("_", " ") : "No difficulty"}
-    </span>
+    <Badge className="bg-admin-surface-subtle text-admin-muted">
+      {difficulty ? difficulty.replace("_", " ") : "Not set"}
+    </Badge>
   );
 }
 
