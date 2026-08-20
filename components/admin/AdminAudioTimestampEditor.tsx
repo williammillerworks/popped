@@ -5,6 +5,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { type StageNumber } from "../../config/game";
 import { isAutoplayBlocked, seekAudio } from "../../lib/audioPlayback";
 import { validateAudioPreviewRange } from "../../lib/audioPreviewValidation";
+import {
+  AdminAlert,
+  ADMIN_BUTTON_SECONDARY,
+  AdminIcon,
+  ADMIN_INPUT_CLASS,
+  ADMIN_LABEL_CLASS,
+} from "./admin-ui";
 
 type PlaybackMode = "full" | "stage" | "reveal";
 type PlaybackStatus = "idle" | "loading" | "playing" | "finished" | "error";
@@ -312,24 +319,33 @@ export function AdminAudioTimestampEditor({
     }
   }
 
+  const statusTone = {
+    error: "bg-admin-destructive-soft text-admin-destructive",
+    finished: "bg-admin-success-soft text-admin-success",
+    idle: "bg-admin-surface-strong text-admin-muted",
+    loading: "bg-admin-accent-soft text-admin-accent",
+    playing: "bg-admin-success-soft text-admin-success",
+  }[displayedPlayback.status];
+
   return (
-    <section className="rounded-3xl border border-[#211b17]/10 bg-[#f7f1e8] p-4">
+    <section className="rounded-xl border border-admin-border bg-admin-surface-subtle/60 p-4 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-2">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b05f3c]">
-            Timestamp Editor
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-admin-accent">
+            Timestamp editor
           </p>
-          <h3 className="text-xl font-black tracking-[-0.04em]">
+          <h3 className="mt-1.5 text-base font-semibold tracking-[-0.01em]">
             Audition the puzzle moment
           </h3>
-          <p className="text-sm leading-6 text-[#5f5148]">
+          <p className="mt-1 max-w-[60ch] text-pretty text-sm leading-6 text-admin-muted">
             All six stage previews start from this timestamp and use the
             selected puzzle preset.
           </p>
         </div>
 
         <button
-          className="h-10 rounded-full border border-[#211b17]/15 px-4 text-sm font-black transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+          aria-pressed={displayedPlayback.mode === "full" && displayedPlayback.status === "playing"}
+          className={ADMIN_BUTTON_SECONDARY}
           disabled={!hasPreviewUrl || displayedPlayback.status === "loading"}
           onClick={() =>
             void playPreview({
@@ -340,17 +356,21 @@ export function AdminAudioTimestampEditor({
           }
           type="button"
         >
+          <AdminIcon name="music" size={16} />
           Play full preview
         </button>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-[12rem_1fr] sm:items-end">
-        <label className="space-y-2">
-          <span className="text-xs font-black uppercase tracking-[0.18em] text-[#b05f3c]">
-            Preview start seconds *
-          </span>
+      <div className="mt-5 grid gap-4 sm:grid-cols-[12rem_minmax(0,1fr)] sm:items-end">
+        <div className="grid gap-2">
+          <label className={ADMIN_LABEL_CLASS} htmlFor="previewStartSeconds">
+            Start seconds <span aria-hidden="true">*</span>
+          </label>
           <input
-            className="h-11 w-full rounded-2xl border border-[#211b17]/15 bg-white px-4 text-sm font-bold text-[#211b17] outline-none transition focus:border-[#b05f3c] focus:ring-4 focus:ring-[#b05f3c]/15"
+            aria-describedby={error ? "previewStartSeconds-help" : undefined}
+            aria-invalid={Boolean(error)}
+            className={`${ADMIN_INPUT_CLASS} tabular-nums`}
+            id="previewStartSeconds"
             min="0"
             name="previewStartSeconds"
             onChange={(event) => onStartSecondsChange(event.target.value)}
@@ -360,16 +380,24 @@ export function AdminAudioTimestampEditor({
             value={previewStartSeconds}
           />
           {error ? (
-            <span className="block text-xs font-bold text-[#9d331e]">
+            <span
+              className="flex items-start gap-1.5 text-[0.8125rem] font-medium leading-5 text-admin-destructive"
+              id="previewStartSeconds-help"
+              role="alert"
+            >
+              <span className="mt-0.5 shrink-0" aria-hidden="true">
+                <AdminIcon name="alert" size={14} />
+              </span>
               {error}
             </span>
           ) : null}
-        </label>
+        </div>
 
         <div className="grid grid-cols-4 gap-2">
           {[-1, -0.1, 0.1, 1].map((delta) => (
             <button
-              className="h-11 rounded-full bg-white px-3 text-sm font-black text-[#211b17] transition hover:-translate-y-0.5"
+              aria-label={`Adjust start time by ${delta > 0 ? `plus ${delta}` : delta} seconds`}
+              className="min-h-11 rounded-lg border border-admin-border bg-admin-surface px-2 text-sm font-medium tabular-nums text-admin-text transition-[background-color,border-color,transform] duration-150 hover:bg-admin-surface-strong active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-focus"
               key={delta}
               onClick={() => adjustStartSeconds(delta)}
               type="button"
@@ -380,30 +408,39 @@ export function AdminAudioTimestampEditor({
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-[#211b17]">
-        <span className="text-[#8a5f3b]">Audio status: </span>
-        {displayedAudioMessage}
-        <span className="ml-2 rounded-full bg-[#211b17] px-2 py-1 text-xs uppercase tracking-[0.12em] text-[#fffaf1]">
+      <div className="mt-4 flex flex-col gap-2 rounded-lg border border-admin-border bg-admin-surface px-3.5 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-pretty text-admin-muted" role="status">
+          <span className="font-medium text-admin-text">Audio status:</span>{" "}
+          {displayedAudioMessage}
+        </p>
+        <span className={`inline-flex min-h-6 w-fit items-center gap-1.5 rounded-md px-2 text-xs font-medium capitalize ${statusTone}`}>
+          <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
           {displayedPlayback.status}
         </span>
       </div>
 
       {rangeValidation && !rangeValidation.valid ? (
-        <p
-          className="mt-3 rounded-2xl bg-[#ffe0d4] px-4 py-3 text-sm font-bold text-[#7a2d1c]"
-          role="alert"
-        >
+        <AdminAlert className="mt-3" title="Audio range is too short" variant="error">
           {rangeValidation.message}
-        </p>
+        </AdminAlert>
       ) : null}
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
         {stageDurations.map((durationSeconds, index) => {
           const stage = (index + 1) as StageNumber;
+          const isPlayingStage =
+            displayedPlayback.mode === "stage" &&
+            displayedPlayback.durationSeconds === durationSeconds &&
+            displayedPlayback.status === "playing";
 
           return (
             <button
-              className="rounded-2xl bg-[#211b17] px-3 py-3 text-left text-sm font-black text-[#fffaf1] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+              aria-pressed={isPlayingStage}
+              className={`min-h-14 rounded-lg border px-3 py-2.5 text-start text-sm font-semibold tabular-nums transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-focus disabled:cursor-not-allowed disabled:border-admin-border disabled:bg-admin-surface-strong disabled:text-admin-subtle disabled:active:scale-100 ${
+                isPlayingStage
+                  ? "border-admin-accent bg-admin-accent-soft text-admin-accent"
+                  : "border-admin-border bg-admin-surface text-admin-text hover:border-admin-border-strong hover:bg-admin-surface-strong"
+              }`}
               disabled={!hasPreviewUrl || displayedPlayback.status === "loading"}
               key={stage}
               onClick={() =>
@@ -416,7 +453,7 @@ export function AdminAudioTimestampEditor({
               }
               type="button"
             >
-              <span className="block text-[0.65rem] uppercase tracking-[0.14em] text-[#e4aa73]">
+              <span className="block text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-admin-subtle">
                 Stage {stage}
               </span>
               {durationSeconds}s
@@ -425,7 +462,8 @@ export function AdminAudioTimestampEditor({
         })}
 
         <button
-          className="rounded-2xl bg-[#e4aa73] px-3 py-3 text-left text-sm font-black text-[#211b17] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+          aria-pressed={displayedPlayback.mode === "reveal" && displayedPlayback.status === "playing"}
+          className="min-h-14 rounded-lg border border-admin-accent/20 bg-admin-accent-soft px-3 py-2.5 text-start text-sm font-semibold text-admin-accent transition-[background-color,border-color,transform] duration-150 hover:border-admin-accent/35 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-focus disabled:cursor-not-allowed disabled:border-admin-border disabled:bg-admin-surface-strong disabled:text-admin-subtle disabled:active:scale-100"
           disabled={!hasPreviewUrl || displayedPlayback.status === "loading"}
           onClick={() =>
             void playPreview({
@@ -436,7 +474,7 @@ export function AdminAudioTimestampEditor({
           }
           type="button"
         >
-          <span className="block text-[0.65rem] uppercase tracking-[0.14em]">
+          <span className="block text-[0.6875rem] font-medium uppercase tracking-[0.1em]">
             Reveal
           </span>
           Start to end

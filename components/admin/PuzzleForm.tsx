@@ -16,6 +16,17 @@ import {
   type AudioRangeValidationState,
 } from "./AdminAudioTimestampEditor";
 import {
+  AdminAlert,
+  ADMIN_BUTTON_GHOST,
+  ADMIN_BUTTON_PRIMARY,
+  ADMIN_BUTTON_SECONDARY,
+  ADMIN_HELP_CLASS,
+  AdminIcon,
+  ADMIN_INPUT_CLASS,
+  ADMIN_LABEL_CLASS,
+  AdminPanel,
+} from "./admin-ui";
+import {
   EMPTY_PUZZLE_FORM_STATE,
   type PuzzleFormState,
 } from "../../lib/puzzleForm";
@@ -250,140 +261,151 @@ export function PuzzleForm({
   }
 
   return (
-    <div className="grid gap-5">
-      <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-        <div className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#e4aa73]">
-            Music Search
-          </p>
-          <h2 className="text-2xl font-black tracking-[-0.04em]">
-            Find the right preview
-          </h2>
-          <p className="text-sm leading-6 text-[#d8c8b7]">
-            Search iTunes first, then verify version details before selecting.
-            Manual preview URL override stays available below.
-          </p>
+    <div className="grid gap-6">
+      <AdminPanel className="p-5 sm:p-6">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-admin-accent-soft text-admin-accent">
+            <AdminIcon name="search" size={19} />
+          </span>
+          <div>
+            <h2 className="text-xl font-semibold tracking-[-0.02em]">
+              Find the right preview
+            </h2>
+            <p className="mt-1 max-w-[65ch] text-pretty text-sm leading-6 text-admin-muted">
+              Search iTunes first and verify the version details. A manual
+              preview URL remains available in the audio section.
+            </p>
+          </div>
         </div>
 
         <form
           action={handleSearch}
-          className="mt-5 grid gap-3 sm:grid-cols-[1fr_6rem_auto]"
+          className="mt-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_7rem_auto]"
         >
-          <label className="space-y-2">
-            <span className="text-xs font-black uppercase tracking-[0.18em] text-[#e4aa73]">
-              Search
-            </span>
-            <input
-              className="h-12 w-full rounded-2xl border border-white/15 bg-[#fffaf1] px-4 text-sm font-bold text-[#211b17] outline-none transition focus:border-[#e4aa73] focus:ring-4 focus:ring-[#e4aa73]/20"
-              name="term"
-              onChange={(event) => setTerm(event.target.value)}
-              placeholder="IVE LOVE DIVE"
-              type="search"
-              value={term}
-            />
-          </label>
+          <div className="grid gap-2">
+            <label className={ADMIN_LABEL_CLASS} htmlFor="music-search-term">
+              Song or artist
+            </label>
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 start-3.5 flex items-center text-admin-subtle">
+                <AdminIcon name="search" size={17} />
+              </span>
+              <input
+                autoComplete="off"
+                className={`${ADMIN_INPUT_CLASS} ps-10`}
+                id="music-search-term"
+                name="term"
+                onChange={(event) => setTerm(event.target.value)}
+                placeholder="e.g. IVE Love Dive"
+                spellCheck={false}
+                type="search"
+                value={term}
+              />
+            </div>
+          </div>
 
-          <label className="space-y-2">
-            <span className="text-xs font-black uppercase tracking-[0.18em] text-[#e4aa73]">
-              Country
-            </span>
+          <div className="grid gap-2">
+            <label className={ADMIN_LABEL_CLASS} htmlFor="music-search-country">
+              Store
+            </label>
             <input
-              className="h-12 w-full rounded-2xl border border-white/15 bg-[#fffaf1] px-4 text-sm font-bold uppercase text-[#211b17] outline-none transition focus:border-[#e4aa73] focus:ring-4 focus:ring-[#e4aa73]/20"
+              autoComplete="off"
+              className={`${ADMIN_INPUT_CLASS} uppercase tabular-nums`}
+              id="music-search-country"
               maxLength={2}
               name="country"
               onChange={(event) => setCountry(event.target.value.toUpperCase())}
+              spellCheck={false}
               value={country}
             />
-          </label>
+          </div>
 
           <button
-            className="h-12 self-end rounded-full bg-[#fffaf1] px-5 text-sm font-black text-[#211b17] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+            className={`${ADMIN_BUTTON_SECONDARY} self-end`}
             disabled={isSearching}
             type="submit"
           >
-            {isSearching ? "Searching" : "Search"}
+            <AdminIcon name="search" size={17} />
+            {isSearching ? "Searching…" : "Search catalog"}
           </button>
         </form>
 
-        <div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-semibold text-[#d8c8b7]" role="status">
+        <div className="mt-4 flex flex-col gap-3 border-t border-admin-border pt-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-pretty text-admin-muted" role="status">
             {searchMessage}
           </p>
-          <label className="inline-flex items-center gap-2 font-bold text-[#d8c8b7]">
+          <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-lg px-2 text-sm font-medium text-admin-muted hover:bg-admin-surface-subtle">
             <input
               checked={showUnusableResults}
-              className="size-4 accent-[#e4aa73]"
+              className="size-4 accent-admin-accent"
               onChange={(event) => setShowUnusableResults(event.target.checked)}
               type="checkbox"
             />
-            Show unusable results
+            Show tracks without previews
           </label>
         </div>
 
         {searchError ? (
-          <p
-            className="mt-4 rounded-2xl bg-[#4b241b] px-4 py-3 text-sm font-bold text-[#ffd9ca]"
-            role="alert"
-          >
+          <AdminAlert className="mt-4" title="Music search failed" variant="error">
             {searchError}
-          </p>
+          </AdminAlert>
         ) : null}
 
         <div className="mt-5 grid gap-3">
-          {visibleResults.map((result) => (
-            <SearchResultCard
-              key={result.trackId}
-              onSelect={handleSelectResult}
-              result={result}
-            />
-          ))}
+          {isSearching
+            ? Array.from({ length: 3 }, (_, index) => (
+                <div
+                  aria-hidden="true"
+                  className="h-28 animate-pulse rounded-xl bg-admin-surface-subtle"
+                  key={index}
+                />
+              ))
+            : visibleResults.map((result) => (
+                <SearchResultCard
+                  key={result.trackId}
+                  onSelect={handleSelectResult}
+                  result={result}
+                />
+              ))}
           {hasSearched && !isSearching && !searchError && visibleResults.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-white/15 bg-[#181411]/60 p-5 text-sm font-semibold leading-6 text-[#d8c8b7]">
-              <p className="font-black text-[#fffaf1]">No selectable results yet.</p>
-              <p className="mt-2">
-                Try adding the artist name, switching country storefronts, or
-                turning on unusable results to inspect tracks without previews.
-                You can still paste a preview URL manually in the form.
+            <div className="rounded-xl border border-dashed border-admin-border-strong bg-admin-surface-subtle/60 p-5 text-sm leading-6 text-admin-muted">
+              <p className="font-semibold text-admin-text">No selectable tracks found</p>
+              <p className="mt-1 text-pretty">
+                Add the artist name, try another storefront, or show tracks
+                without previews. You can also paste a preview URL manually.
               </p>
             </div>
           ) : null}
         </div>
-      </section>
+      </AdminPanel>
 
-      <form
-        action={formAction}
-        className="grid gap-5"
-        onSubmit={handlePuzzleSubmit}
-      >
-        <section className="rounded-3xl border border-white/10 bg-[#fffaf1] p-5 text-[#211b17]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-2">
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#b05f3c]">
-                Puzzle Form
-              </p>
-              <h2 className="text-2xl font-black tracking-[-0.04em]">
-                {mode === "create" ? "Create puzzle" : "Edit puzzle"}
-              </h2>
-              <p className="text-sm leading-6 text-[#5f5148]">
-                Choose one versioned six-stage duration preset for this puzzle.
-              </p>
-            </div>
-            <Link
-              className="inline-flex h-10 items-center justify-center rounded-full border border-[#211b17]/15 px-4 text-sm font-black text-[#211b17] transition hover:-translate-y-0.5"
-              href="/admin/puzzles"
-            >
-              Back to list
-            </Link>
-          </div>
+      <form action={formAction} className="grid gap-6" onSubmit={handlePuzzleSubmit}>
+        {state.message ? (
+          <AdminAlert
+            title={state.ok ? "Changes saved" : "Puzzle was not saved"}
+            variant={state.ok ? "success" : "error"}
+          >
+            {state.message}
+          </AdminAlert>
+        ) : null}
 
-          <div className="mt-5 grid gap-3 rounded-3xl border border-[#211b17]/10 bg-[#f7f1e8] p-4">
-            <label className="space-y-2">
-              <span className="text-xs font-black uppercase tracking-[0.18em] text-[#b05f3c]">
-                Duration preset *
-              </span>
+        <ValidationSummary errors={state.errors} />
+
+        <FormSection
+          description="Choose when the puzzle appears, who owns the edit, and which clue timing preset it uses."
+          step="01"
+          title="Schedule and ownership"
+        >
+          <div className="grid gap-5">
+            <div className="grid gap-2">
+              <label className={ADMIN_LABEL_CLASS} htmlFor="durationPresetId">
+                Duration preset <span aria-hidden="true">*</span>
+              </label>
               <select
+                aria-describedby="durationPresetId-help"
                 aria-invalid={Boolean(state.errors.durationPresetId)}
-                className="h-11 w-full rounded-2xl border border-[#211b17]/15 bg-white px-4 text-sm font-bold text-[#211b17] outline-none transition focus:border-[#b05f3c] focus:ring-4 focus:ring-[#b05f3c]/15"
+                className={ADMIN_INPUT_CLASS}
+                id="durationPresetId"
                 name="durationPresetId"
                 onChange={(event) =>
                   updateField(
@@ -404,53 +426,34 @@ export function PuzzleForm({
                   );
                 })}
               </select>
-              <span className="block text-sm leading-6 text-[#5f5148]">
-                {durationPreset.description}
-              </span>
-              <FieldHelp error={state.errors.durationPresetId} />
-            </label>
-
-            {isPublishedPresetChange ? (
-              <p
-                className="rounded-2xl bg-[#fff0bd] px-4 py-3 text-sm font-bold text-[#684b00]"
-                role="status"
-              >
-                This puzzle is already published. Changing its duration preset
-                changes the clue timing for anyone who opens it after you save.
-              </p>
-            ) : null}
+              <FieldHelp
+                error={state.errors.durationPresetId}
+                helperText={durationPreset.description}
+                id="durationPresetId-help"
+              />
+            </div>
 
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
               {stageDurations.map((duration, index) => (
                 <div
-                  className="rounded-2xl bg-white px-3 py-2 text-center text-sm font-black"
+                  className="rounded-lg bg-admin-surface-subtle px-2 py-2.5 text-center text-sm font-semibold tabular-nums"
                   key={`${values.durationPresetId}-${duration}`}
                 >
-                  <span className="block text-[0.65rem] uppercase tracking-[0.14em] text-[#8a5f3b]">
+                  <span className="block text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-admin-subtle">
                     Stage {index + 1}
                   </span>
-                  {duration}s
+                  <span className="mt-0.5 block">{duration}s</span>
                 </div>
               ))}
             </div>
-          </div>
 
-          {state.message ? (
-            <p
-              className={`mt-5 rounded-2xl px-4 py-3 text-sm font-bold ${
-                state.ok
-                  ? "bg-[#d9f8c4] text-[#244512]"
-                  : "bg-[#ffe0d4] text-[#7a2d1c]"
-              }`}
-              role="status"
-            >
-              {state.message}
-            </p>
-          ) : null}
+            {isPublishedPresetChange ? (
+              <AdminAlert title="This changes a published puzzle" variant="warning">
+                Saving a new duration preset changes clue timing for anyone who
+                opens this puzzle afterward.
+              </AdminAlert>
+            ) : null}
 
-          <ValidationSummary errors={state.errors} />
-
-          <div className="mt-5 grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <FormInput
                 error={state.errors.date}
@@ -471,13 +474,15 @@ export function PuzzleForm({
               />
             </div>
 
-            <label className="space-y-2">
-              <span className="text-xs font-black uppercase tracking-[0.18em] text-[#b05f3c]">
-                Editor *
-              </span>
+            <div className="grid gap-2">
+              <label className={ADMIN_LABEL_CLASS} htmlFor="editorId">
+                Editor <span aria-hidden="true">*</span>
+              </label>
               <select
+                aria-describedby={state.errors.editorId ? "editorId-help" : undefined}
                 aria-invalid={Boolean(state.errors.editorId)}
-                className="h-11 w-full rounded-2xl border border-[#211b17]/15 bg-white px-4 text-sm font-bold text-[#211b17] outline-none transition focus:border-[#b05f3c] focus:ring-4 focus:ring-[#b05f3c]/15"
+                className={ADMIN_INPUT_CLASS}
+                id="editorId"
                 name="editorId"
                 onChange={(event) => updateField("editorId", event.target.value)}
                 required
@@ -490,8 +495,17 @@ export function PuzzleForm({
                   </option>
                 ))}
               </select>
-              <FieldHelp error={state.errors.editorId} />
-            </label>
+              <FieldHelp error={state.errors.editorId} id="editorId-help" />
+            </div>
+          </div>
+        </FormSection>
+
+        <FormSection
+          description="Use the exact display metadata and include every valid song-title alias players may enter."
+          step="02"
+          title="Track identity"
+        >
+          <div className="grid gap-4">
 
             <div className="grid gap-4 sm:grid-cols-2">
               <FormInput
@@ -553,8 +567,15 @@ export function PuzzleForm({
               required
               value={values.acceptedAnswers}
             />
+          </div>
+        </FormSection>
 
-            <div className="grid gap-4">
+        <FormSection
+          description="Confirm the source audio, then audition every clue length from one shared start timestamp."
+          step="03"
+          title="Audio preview"
+        >
+          <div className="grid gap-4">
               <FormInput
                 error={state.errors.previewUrl}
                 helperText="Manual URL override is intentionally available."
@@ -576,11 +597,10 @@ export function PuzzleForm({
                 stageDurations={stageDurations}
               />
               {audioRangeValidation.status === "checking" ? (
-                <p className="text-sm font-bold text-[#5f5148]" role="status">
+                <AdminAlert title="Checking audio range" variant="info">
                   {audioRangeValidation.message}
-                </p>
+                </AdminAlert>
               ) : null}
-            </div>
 
             <FormInput
               error={state.errors.albumArtUrl}
@@ -590,7 +610,15 @@ export function PuzzleForm({
               type="url"
               value={values.albumArtUrl}
             />
+          </div>
+        </FormSection>
 
+        <FormSection
+          description="Keep the source reference and optional editorial classification attached to the puzzle."
+          step="04"
+          title="Catalog metadata"
+        >
+          <div className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-3">
               <FormSelect
                 error={state.errors.source}
@@ -645,11 +673,11 @@ export function PuzzleForm({
               value={values.notes}
             />
 
-            <div className="grid gap-3 rounded-3xl border border-[#211b17]/10 bg-[#f7f1e8] p-4">
-              <label className="flex items-start gap-3 text-sm font-bold">
+            <div className="grid gap-2 rounded-xl bg-admin-surface-subtle p-2">
+              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg p-3 text-sm font-medium hover:bg-admin-surface">
                 <input
                   checked={values.isTest}
-                  className="mt-1 size-4 accent-[#b05f3c]"
+                  className="mt-0.5 size-4 shrink-0 accent-admin-accent"
                   name="isTest"
                   onChange={(event) =>
                     setValues((currentValues) => ({
@@ -664,16 +692,16 @@ export function PuzzleForm({
                 />
                 <span>
                   Test puzzle
-                  <span className="block font-medium leading-6 text-[#5f5148]">
+                  <span className="mt-0.5 block font-normal leading-5 text-admin-muted">
                     Test puzzles never count toward public puzzle numbering.
                   </span>
                 </span>
               </label>
 
-              <label className="flex items-start gap-3 text-sm font-bold">
+              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg p-3 text-sm font-medium hover:bg-admin-surface has-disabled:cursor-not-allowed has-disabled:text-admin-subtle">
                 <input
                   checked={values.countsTowardPuzzleNumber}
-                  className="mt-1 size-4 accent-[#b05f3c]"
+                  className="mt-0.5 size-4 shrink-0 accent-admin-accent"
                   disabled={values.isTest}
                   name="countsTowardPuzzleNumber"
                   onChange={(event) =>
@@ -683,34 +711,75 @@ export function PuzzleForm({
                 />
                 <span>
                   Counts toward public puzzle number
-                  <span className="block font-medium leading-6 text-[#5f5148]">
+                  <span className="mt-0.5 block font-normal leading-5 text-admin-muted">
                     Disabled while this is marked as a test puzzle.
                   </span>
                 </span>
               </label>
             </div>
           </div>
+        </FormSection>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <div className="sticky bottom-3 z-20 flex flex-col gap-3 rounded-xl border border-admin-border bg-admin-surface/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-admin-floating backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
+          <p className="px-1 text-sm text-admin-muted">
+            {mode === "create"
+              ? "New puzzles start as test-safe drafts."
+              : "Review audio timing before saving live changes."}
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <Link className={ADMIN_BUTTON_GHOST} href="/admin/puzzles">
+              Cancel
+            </Link>
             <button
-              className="h-12 rounded-full bg-[#211b17] px-6 text-sm font-black text-[#fffaf1] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+              className={ADMIN_BUTTON_PRIMARY}
               disabled={isPending || isAudioRangeBlocking}
               type="submit"
             >
               {isPending
-                ? "Saving..."
+                ? mode === "create"
+                  ? "Creating puzzle…"
+                  : "Saving changes…"
                 : audioRangeValidation.status === "checking"
-                  ? "Checking audio..."
+                  ? "Checking audio…"
                   : audioRangeValidation.status === "invalid"
                     ? "Fix audio range"
-                : mode === "create"
-                  ? "Create puzzle"
-                  : "Save puzzle"}
+                    : mode === "create"
+                      ? "Create puzzle"
+                      : "Save changes"}
             </button>
           </div>
-        </section>
+        </div>
       </form>
     </div>
+  );
+}
+
+function FormSection({
+  children,
+  description,
+  step,
+  title,
+}: {
+  children: React.ReactNode;
+  description: string;
+  step: string;
+  title: string;
+}) {
+  return (
+    <AdminPanel className="overflow-hidden">
+      <div className="grid gap-3 border-b border-admin-border px-5 py-5 sm:grid-cols-[2.25rem_1fr] sm:px-6">
+        <span className="grid size-8 place-items-center rounded-lg bg-admin-surface-subtle text-xs font-semibold tabular-nums text-admin-muted">
+          {step}
+        </span>
+        <div>
+          <h2 className="text-lg font-semibold tracking-[-0.015em]">{title}</h2>
+          <p className="mt-1 max-w-[65ch] text-pretty text-sm leading-6 text-admin-muted">
+            {description}
+          </p>
+        </div>
+      </div>
+      <div className="p-5 sm:p-6">{children}</div>
+    </AdminPanel>
   );
 }
 
@@ -725,37 +794,50 @@ function SearchResultCard({
   const releaseDate = result.releaseDate?.slice(0, 10);
 
   return (
-    <article className="grid gap-4 rounded-3xl border border-white/10 bg-[#181411]/60 p-4 sm:grid-cols-[4.5rem_1fr_auto] sm:items-center">
-      <div className="relative size-18 overflow-hidden rounded-2xl bg-white/10">
+    <article className="grid gap-4 rounded-xl border border-admin-border bg-admin-surface-subtle/45 p-4 sm:grid-cols-[4rem_minmax(0,1fr)_auto] sm:items-center">
+      <div className="relative grid size-16 place-items-center overflow-hidden rounded-lg bg-admin-surface-strong text-admin-subtle outline-1 -outline-offset-1 outline-black/10">
         {result.artworkUrl ? (
           <Image
             alt={`${result.trackName} album art`}
-            className="object-cover"
+            className="object-cover outline-1 -outline-offset-1 outline-black/10"
             fill
-            sizes="72px"
+            sizes="64px"
             src={result.artworkUrl}
             unoptimized
           />
-        ) : null}
+        ) : (
+          <AdminIcon name="music" size={20} />
+        )}
       </div>
 
-      <div className="min-w-0 space-y-2">
+      <div className="min-w-0">
         <div>
-          <h3 className="truncate text-lg font-black tracking-[-0.03em]">
+          <h3
+            className="truncate text-sm font-semibold text-admin-text"
+            title={result.trackName}
+          >
             {result.trackName}
           </h3>
-          <p className="truncate text-sm font-bold text-[#fffaf1]/80">
+          <p
+            className="mt-0.5 truncate text-sm text-admin-muted"
+            title={result.artistName}
+          >
             {result.artistName}
           </p>
         </div>
 
-        <dl className="grid gap-1 text-xs font-semibold text-[#d8c8b7]">
+        <dl className="mt-2 grid gap-1 text-xs text-admin-subtle">
           <div>
             <dt className="sr-only">Collection</dt>
-            <dd>{result.collectionName ?? "Collection unknown"}</dd>
+            <dd
+              className="truncate"
+              title={result.collectionName ?? "Collection unknown"}
+            >
+              {result.collectionName ?? "Collection unknown"}
+            </dd>
           </div>
           <div className="flex flex-wrap gap-x-3 gap-y-1">
-            <span>{releaseDate ?? "Date unknown"}</span>
+            <span className="tabular-nums">{releaseDate ?? "Date unknown"}</span>
             <span>{result.country ?? "Store unknown"}</span>
             <span>{result.primaryGenreName ?? "Genre unknown"}</span>
             <span>{result.trackExplicitness ?? "explicitness unknown"}</span>
@@ -765,16 +847,17 @@ function SearchResultCard({
 
       <div className="flex flex-col gap-2 sm:items-end">
         <span
-          className={`rounded-full px-3 py-1 text-xs font-black ${
+          className={`inline-flex min-h-6 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-xs font-medium ${
             hasPreview
-              ? "bg-[#d9f8c4] text-[#244512]"
-              : "bg-[#4b241b] text-[#ffd9ca]"
+              ? "bg-admin-success-soft text-admin-success"
+              : "bg-admin-destructive-soft text-admin-destructive"
           }`}
         >
+          <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
           {hasPreview ? "Preview ready" : "No preview"}
         </span>
         <button
-          className="h-10 rounded-full bg-[#e4aa73] px-4 text-sm font-black text-[#211b17] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+          className={ADMIN_BUTTON_SECONDARY}
           disabled={!hasPreview}
           onClick={() => onSelect(result)}
           type="button"
@@ -823,17 +906,13 @@ function ValidationSummary({ errors }: { errors: Record<string, string> }) {
   }
 
   return (
-    <div
-      className="mt-5 rounded-2xl border border-[#9d331e]/20 bg-[#ffe0d4] px-4 py-3 text-sm text-[#7a2d1c]"
-      role="alert"
-    >
-      <p className="font-black">Fix these fields before saving:</p>
-      <ul className="mt-2 list-disc space-y-1 pl-5 font-bold">
+    <AdminAlert title="Fix the highlighted fields before saving" variant="error">
+      <ul className="mt-1 list-disc space-y-1 ps-4">
         {entries.map(([field, message]) => (
           <li key={field}>{message}</li>
         ))}
       </ul>
-    </div>
+    </AdminAlert>
   );
 }
 
@@ -862,16 +941,21 @@ function FormInput({
   React.InputHTMLAttributes<HTMLInputElement>,
   "name" | "onBlur" | "onChange" | "required" | "type" | "value"
 >) {
+  const id = String(name);
+  const helpId = `${id}-help`;
+
   return (
-    <label className="space-y-2">
-      <span className="text-xs font-black uppercase tracking-[0.18em] text-[#b05f3c]">
+    <div className="grid gap-2">
+      <label className={ADMIN_LABEL_CLASS} htmlFor={id}>
         {label}
-        {required ? " *" : ""}
-      </span>
+        {required ? <span aria-hidden="true"> *</span> : null}
+      </label>
       <input
         {...inputProps}
+        aria-describedby={error || helperText ? helpId : undefined}
         aria-invalid={Boolean(error)}
-        className="h-11 w-full rounded-2xl border border-[#211b17]/15 bg-white px-4 text-sm font-bold text-[#211b17] outline-none transition focus:border-[#b05f3c] focus:ring-4 focus:ring-[#b05f3c]/15"
+        className={ADMIN_INPUT_CLASS}
+        id={id}
         name={name}
         onBlur={onBlur}
         onChange={(event) => onChange(event.target.value)}
@@ -879,8 +963,8 @@ function FormInput({
         type={type}
         value={value}
       />
-      <FieldHelp error={error} helperText={helperText} />
-    </label>
+      <FieldHelp error={error} helperText={helperText} id={helpId} />
+    </div>
   );
 }
 
@@ -901,14 +985,19 @@ function FormSelect({
   placeholder?: string;
   value: string;
 }) {
+  const id = String(name);
+  const helpId = `${id}-help`;
+
   return (
-    <label className="space-y-2">
-      <span className="text-xs font-black uppercase tracking-[0.18em] text-[#b05f3c]">
+    <div className="grid gap-2">
+      <label className={ADMIN_LABEL_CLASS} htmlFor={id}>
         {label}
-      </span>
+      </label>
       <select
+        aria-describedby={error ? helpId : undefined}
         aria-invalid={Boolean(error)}
-        className="h-11 w-full rounded-2xl border border-[#211b17]/15 bg-white px-4 text-sm font-bold text-[#211b17] outline-none transition focus:border-[#b05f3c] focus:ring-4 focus:ring-[#b05f3c]/15"
+        className={ADMIN_INPUT_CLASS}
+        id={id}
         name={name}
         onChange={(event) => onChange(event.target.value)}
         value={value}
@@ -920,8 +1009,8 @@ function FormSelect({
           </option>
         ))}
       </select>
-      <FieldHelp error={error} />
-    </label>
+      <FieldHelp error={error} id={helpId} />
+    </div>
   );
 }
 
@@ -942,39 +1031,63 @@ function FormTextarea({
   required?: boolean;
   value: string;
 }) {
+  const id = String(name);
+  const helpId = `${id}-help`;
+
   return (
-    <label className="space-y-2">
-      <span className="text-xs font-black uppercase tracking-[0.18em] text-[#b05f3c]">
+    <div className="grid gap-2">
+      <label className={ADMIN_LABEL_CLASS} htmlFor={id}>
         {label}
-        {required ? " *" : ""}
-      </span>
+        {required ? <span aria-hidden="true"> *</span> : null}
+      </label>
       <textarea
+        aria-describedby={error || helperText ? helpId : undefined}
         aria-invalid={Boolean(error)}
-        className="min-h-24 w-full rounded-2xl border border-[#211b17]/15 bg-white px-4 py-3 text-sm font-bold text-[#211b17] outline-none transition focus:border-[#b05f3c] focus:ring-4 focus:ring-[#b05f3c]/15"
+        className={`${ADMIN_INPUT_CLASS} min-h-28 py-3 leading-6`}
+        id={id}
         name={name}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+            event.preventDefault();
+            event.currentTarget.form?.requestSubmit();
+          }
+        }}
         required={required}
         value={value}
       />
-      <FieldHelp error={error} helperText={helperText} />
-    </label>
+      <FieldHelp error={error} helperText={helperText} id={helpId} />
+    </div>
   );
 }
 
 function FieldHelp({
   error,
   helperText,
+  id,
 }: {
   error?: string;
   helperText?: string;
+  id?: string;
 }) {
   if (error) {
-    return <span className="block text-xs font-bold text-[#9d331e]">{error}</span>;
+    return (
+      <span
+        className="flex items-start gap-1.5 text-[0.8125rem] font-medium leading-5 text-admin-destructive"
+        id={id}
+        role="alert"
+      >
+        <span className="mt-0.5 shrink-0" aria-hidden="true">
+          <AdminIcon name="alert" size={14} />
+        </span>
+        {error}
+      </span>
+    );
   }
 
   if (helperText) {
     return (
-      <span className="block text-xs font-semibold leading-5 text-[#6b5c50]">
+      <span className={ADMIN_HELP_CLASS} id={id}>
         {helperText}
       </span>
     );
