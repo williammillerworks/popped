@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { TOTAL_STAGES, type StageNumber } from "../../config/game";
@@ -12,6 +11,11 @@ import {
   getDailyLoadingMessage,
   getLoadingCompletionDuration,
 } from "../../lib/loading-experience";
+import {
+  PoppedLogoSoundcheck,
+  SoundcheckButton,
+  type PoppedLogoSoundcheckHandle,
+} from "./popped-logo-soundcheck";
 
 type ArrivalVariant =
   | "loading"
@@ -105,6 +109,8 @@ export function ArrivalScreen({
   stage,
   variant,
 }: ArrivalScreenProps) {
+  const logoSoundcheckRef = useRef<PoppedLogoSoundcheckHandle>(null);
+
   if (variant === "loading") {
     return (
       <ArrivalLoadingScreen
@@ -130,15 +136,17 @@ export function ArrivalScreen({
       <section
         className={`popped-arrival-screen popped-arrival-screen-${variant}`}
       >
+        <SoundcheckButton
+          className="popped-arrival-soundcheck"
+          onActivate={() => logoSoundcheckRef.current?.restart()}
+        />
         <div className="popped-arrival-content">
           <div className="popped-arrival-hero">
-            <Image
-              alt="POPPED"
+            <PoppedLogoSoundcheck
+              autoPlay
               className="popped-arrival-logo"
-              height={252}
-              priority
-              src="/popped-logo.png"
-              width={1020}
+              eager
+              ref={logoSoundcheckRef}
             />
             <ArrivalHeading
               errorMessage={errorMessage}

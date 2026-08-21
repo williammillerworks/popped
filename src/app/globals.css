@@ -175,6 +175,7 @@ body {
 }
 
 .popped-arrival-screen {
+  position: relative;
   width: 100%;
   min-height: 100vh;
   min-height: 100svh;
@@ -189,6 +190,13 @@ body {
     max(24px, env(safe-area-inset-left));
   background: #ffffff;
   font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.popped-arrival-soundcheck {
+  position: absolute;
+  z-index: 1;
+  top: max(16px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
 }
 
 .popped-arrival-content {
