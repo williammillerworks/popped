@@ -5,6 +5,69 @@ export const POPPED_LOGO_SOUND_CHECK_TIMELINE_MS = [
   0, 190, 410, 515, 620, 760,
 ] as const;
 
+export const POPPED_LOGO_SOUND_CHECK_SCHEDULE_LEAD_MS = 60;
+
+type PoppedLogoAudioSessionNavigator = {
+  audioSession?: {
+    type: string;
+  };
+};
+
+export function configurePoppedLogoPlaybackAudioSession(
+  navigatorLike: Navigator & PoppedLogoAudioSessionNavigator,
+) {
+  const audioSession = navigatorLike.audioSession;
+
+  if (!audioSession) {
+    return false;
+  }
+
+  try {
+    audioSession.type = "playback";
+    return audioSession.type === "playback";
+  } catch {
+    return false;
+  }
+}
+
+type PoppedLogoAudioClock = {
+  contextTimeSeconds: number;
+  currentTimeSeconds: number;
+  outputPerformanceTimeMs?: number;
+  outputTimeSeconds?: number;
+  performanceNowMs: number;
+  startTimeSeconds: number;
+};
+
+export function getPoppedLogoVisualStartDelayMs({
+  contextTimeSeconds,
+  currentTimeSeconds,
+  outputPerformanceTimeMs,
+  outputTimeSeconds,
+  performanceNowMs,
+  startTimeSeconds,
+}: PoppedLogoAudioClock) {
+  if (
+    outputPerformanceTimeMs !== undefined &&
+    outputPerformanceTimeMs > 0 &&
+    outputTimeSeconds !== undefined &&
+    Number.isFinite(outputTimeSeconds)
+  ) {
+    return Math.max(
+      0,
+      outputPerformanceTimeMs +
+        (startTimeSeconds - outputTimeSeconds) * 1000 -
+        performanceNowMs,
+    );
+  }
+
+  return Math.max(
+    0,
+    (startTimeSeconds - Math.max(contextTimeSeconds, currentTimeSeconds)) *
+      1000,
+  );
+}
+
 export const POPPED_LOGO_LETTERS = [
   {
     height: 192,

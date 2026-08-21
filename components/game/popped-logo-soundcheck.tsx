@@ -10,20 +10,28 @@ import {
 } from "react";
 
 import {
+  configurePoppedLogoPlaybackAudioSession,
+  getPoppedLogoVisualStartDelayMs,
   getPoppedLogoLetterMotion,
   POPPED_LOGO_LETTERS,
   POPPED_LOGO_SOUND_CHECK_AUDIO_SRC,
+  POPPED_LOGO_SOUND_CHECK_SCHEDULE_LEAD_MS,
   POPPED_LOGO_SOUND_CHECK_TIMELINE_MS,
 } from "../../lib/popped-logo-soundcheck";
 
 import styles from "./popped-logo-soundcheck.module.css";
 
-const VISUAL_START_FALLBACK_MS = 600;
+const AUTO_VISUAL_FALLBACK_MS = 600;
+const MANUAL_VISUAL_FALLBACK_MS = 1500;
 
-type ActivePlayingListener = {
-  audio: HTMLAudioElement;
-  listener: () => void;
+type SoundcheckAudioState = {
+  bufferPromise: Promise<AudioBuffer | null>;
+  context: AudioContext;
+  disposed: boolean;
+  source: AudioBufferSourceNode | null;
 };
+
+type SoundcheckRunMode = "automatic" | "manual";
 
 export type PoppedLogoSoundcheckHandle = {
   restart: () => void;
@@ -48,33 +56,14 @@ export const PoppedLogoSoundcheck = forwardRef<
   ref,
 ) {
   const activeAnimationsRef = useRef<Animation[]>([]);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioStateRef = useRef<SoundcheckAudioState | null>(null);
   const letterRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const motionPreferenceRef = useRef<MediaQueryList | null>(null);
-  const pendingTimersRef = useRef<number[]>([]);
-  const playingListenerRef = useRef<ActivePlayingListener | null>(null);
   const runIdRef = useRef(0);
   const visualFallbackTimerRef = useRef<number | null>(null);
   const visualStartedRunRef = useRef(0);
 
-  const clearPlayingListener = useCallback(() => {
-    const activeListener = playingListenerRef.current;
-
-    if (!activeListener) {
-      return;
-    }
-
-    activeListener.audio.removeEventListener(
-      "playing",
-      activeListener.listener,
-    );
-    playingListenerRef.current = null;
-  }, []);
-
   const cancelVisualTimeline = useCallback(() => {
-    pendingTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-    pendingTimersRef.current = [];
-
     if (visualFallbackTimerRef.current !== null) {
       window.clearTimeout(visualFallbackTimerRef.current);
       visualFallbackTimerRef.current = null;
@@ -84,127 +73,216 @@ export const PoppedLogoSoundcheck = forwardRef<
     activeAnimationsRef.current = [];
   }, []);
 
-  const startVisualTimeline = useCallback((runId: number) => {
-    if (
-      runId !== runIdRef.current ||
-      visualStartedRunRef.current === runId
-    ) {
+  const stopActiveAudio = useCallback(() => {
+    const audioState = audioStateRef.current;
+    const source = audioState?.source;
+
+    if (!source || !audioState) {
       return;
     }
 
-    visualStartedRunRef.current = runId;
+    audioState.source = null;
 
-    if (motionPreferenceRef.current?.matches) {
-      return;
+    try {
+      source.stop();
+    } catch {
+      // A source that has already ended cannot be stopped again in WebKit.
     }
 
-    function animateLetter(letterIndex: number) {
+    source.disconnect();
+  }, []);
+
+  const startVisualTimeline = useCallback(
+    (runId: number, startDelayMs = 0) => {
       if (
         runId !== runIdRef.current ||
-        motionPreferenceRef.current?.matches
+        visualStartedRunRef.current === runId
       ) {
         return;
       }
-
-      const letter = letterRefs.current[letterIndex];
-
-      if (!letter || typeof letter.animate !== "function") {
-        return;
-      }
-
-      const motion = getPoppedLogoLetterMotion(letterIndex);
-      const animation = letter.animate(motion.keyframes, {
-        duration: motion.durationMs,
-      });
-
-      activeAnimationsRef.current.push(animation);
-    }
-
-    POPPED_LOGO_SOUND_CHECK_TIMELINE_MS.forEach((onsetMs, letterIndex) => {
-      if (onsetMs === 0) {
-        animateLetter(letterIndex);
-        return;
-      }
-
-      const timer = window.setTimeout(
-        () => animateLetter(letterIndex),
-        onsetMs,
-      );
-      pendingTimersRef.current.push(timer);
-    });
-  }, []);
-
-  const restartSoundcheck = useCallback(() => {
-    const runId = runIdRef.current + 1;
-    runIdRef.current = runId;
-
-    clearPlayingListener();
-    cancelVisualTimeline();
-
-    const audio = audioRef.current;
-
-    if (!audio) {
-      startVisualTimeline(runId);
-      return;
-    }
-
-    audio.pause();
-
-    try {
-      audio.currentTime = 0;
-    } catch {
-      // Safari can defer seeking until the local file has metadata.
-    }
-
-    const startVisuals = () => {
-      if (runId !== runIdRef.current) {
-        return;
-      }
-
-      clearPlayingListener();
 
       if (visualFallbackTimerRef.current !== null) {
         window.clearTimeout(visualFallbackTimerRef.current);
         visualFallbackTimerRef.current = null;
       }
 
-      startVisualTimeline(runId);
-    };
-    const handlePlaying = () => startVisuals();
+      visualStartedRunRef.current = runId;
 
-    playingListenerRef.current = { audio, listener: handlePlaying };
-    audio.addEventListener("playing", handlePlaying, { once: true });
+      if (motionPreferenceRef.current?.matches) {
+        return;
+      }
 
-    visualFallbackTimerRef.current = window.setTimeout(() => {
-      audio.pause();
-      startVisuals();
-    }, VISUAL_START_FALLBACK_MS);
+      POPPED_LOGO_SOUND_CHECK_TIMELINE_MS.forEach((onsetMs, letterIndex) => {
+        const letter = letterRefs.current[letterIndex];
 
-    try {
-      void audio.play().catch(() => startVisuals());
-    } catch {
-      startVisuals();
-    }
-  }, [cancelVisualTimeline, clearPlayingListener, startVisualTimeline]);
+        if (!letter || typeof letter.animate !== "function") {
+          return;
+        }
+
+        const motion = getPoppedLogoLetterMotion(letterIndex);
+        const animation = letter.animate(motion.keyframes, {
+          delay: startDelayMs + onsetMs,
+          duration: motion.durationMs,
+        });
+
+        activeAnimationsRef.current.push(animation);
+      });
+    },
+    [],
+  );
+
+  const restartSoundcheck = useCallback(
+    (mode: SoundcheckRunMode) => {
+      const runId = runIdRef.current + 1;
+      runIdRef.current = runId;
+
+      cancelVisualTimeline();
+      stopActiveAudio();
+
+      const audioState = audioStateRef.current;
+
+      if (!audioState || audioState.disposed) {
+        startVisualTimeline(runId);
+        return;
+      }
+
+      configurePoppedLogoPlaybackAudioSession(navigator);
+
+      const fallbackDelay =
+        mode === "automatic"
+          ? AUTO_VISUAL_FALLBACK_MS
+          : MANUAL_VISUAL_FALLBACK_MS;
+
+      visualFallbackTimerRef.current = window.setTimeout(() => {
+        startVisualTimeline(runId);
+      }, fallbackDelay);
+
+      const resumePromise =
+        audioState.context.state === "running"
+          ? Promise.resolve()
+          : audioState.context.resume();
+
+      void Promise.all([resumePromise, audioState.bufferPromise])
+        .then(([, audioBuffer]) => {
+          if (
+            runId !== runIdRef.current ||
+            audioState.disposed ||
+            visualStartedRunRef.current === runId ||
+            audioState.context.state !== "running" ||
+            !audioBuffer
+          ) {
+            if (runId === runIdRef.current && !audioBuffer) {
+              startVisualTimeline(runId);
+            }
+            return;
+          }
+
+          const source = audioState.context.createBufferSource();
+          const startTimeSeconds =
+            audioState.context.currentTime +
+            POPPED_LOGO_SOUND_CHECK_SCHEDULE_LEAD_MS / 1000;
+
+          try {
+            source.buffer = audioBuffer;
+            source.connect(audioState.context.destination);
+            source.addEventListener(
+              "ended",
+              () => {
+                if (audioState.source === source) {
+                  audioState.source = null;
+                }
+                source.disconnect();
+              },
+              { once: true },
+            );
+            audioState.source = source;
+            source.start(startTimeSeconds);
+          } catch {
+            if (audioState.source === source) {
+              audioState.source = null;
+            }
+            source.disconnect();
+            startVisualTimeline(runId);
+            return;
+          }
+
+          let outputPerformanceTimeMs: number | undefined;
+          let outputTimeSeconds: number | undefined;
+
+          try {
+            if (typeof audioState.context.getOutputTimestamp === "function") {
+              const outputTimestamp = audioState.context.getOutputTimestamp();
+              outputPerformanceTimeMs = outputTimestamp.performanceTime;
+              outputTimeSeconds = outputTimestamp.contextTime;
+            }
+          } catch {
+            // Older WebKit builds expose the method before it is usable.
+          }
+
+          const visualStartDelayMs = getPoppedLogoVisualStartDelayMs({
+            contextTimeSeconds: audioState.context.currentTime,
+            currentTimeSeconds: audioState.context.currentTime,
+            outputPerformanceTimeMs,
+            outputTimeSeconds,
+            performanceNowMs: performance.now(),
+            startTimeSeconds,
+          });
+
+          startVisualTimeline(runId, visualStartDelayMs);
+        })
+        .catch(() => startVisualTimeline(runId));
+    },
+    [cancelVisualTimeline, startVisualTimeline, stopActiveAudio],
+  );
 
   useImperativeHandle(
     ref,
     () => ({
-      restart: restartSoundcheck,
+      restart: () => restartSoundcheck("manual"),
     }),
     [restartSoundcheck],
   );
 
   useEffect(() => {
-    const audio = new Audio(POPPED_LOGO_SOUND_CHECK_AUDIO_SRC);
+    const abortController = new AbortController();
     const motionPreference = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     );
+    const AudioContextConstructor =
+      window.AudioContext ??
+      (
+        window as typeof window & {
+          webkitAudioContext?: typeof AudioContext;
+        }
+      ).webkitAudioContext;
 
-    audio.preload = "auto";
-    audioRef.current = audio;
+    let audioState: SoundcheckAudioState | null = null;
+
+    if (AudioContextConstructor) {
+      const context = new AudioContextConstructor();
+      const bufferPromise = fetch(POPPED_LOGO_SOUND_CHECK_AUDIO_SRC, {
+        cache: "force-cache",
+        signal: abortController.signal,
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Soundcheck audio could not load");
+          }
+          return response.arrayBuffer();
+        })
+        .then((encodedAudio) => context.decodeAudioData(encodedAudio))
+        .catch(() => null);
+
+      audioState = {
+        bufferPromise,
+        context,
+        disposed: false,
+        source: null,
+      };
+    }
+
+    audioStateRef.current = audioState;
     motionPreferenceRef.current = motionPreference;
-    audio.load();
 
     function handleMotionPreferenceChange(event: MediaQueryListEvent) {
       if (event.matches) {
@@ -215,32 +293,32 @@ export const PoppedLogoSoundcheck = forwardRef<
     motionPreference.addEventListener("change", handleMotionPreferenceChange);
 
     if (autoPlay) {
-      restartSoundcheck();
+      restartSoundcheck("automatic");
     }
 
     return () => {
       runIdRef.current += 1;
-      clearPlayingListener();
       cancelVisualTimeline();
+      stopActiveAudio();
       motionPreference.removeEventListener(
         "change",
         handleMotionPreferenceChange,
       );
       motionPreferenceRef.current = null;
+      abortController.abort();
 
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
-
-      if (audioRef.current === audio) {
-        audioRef.current = null;
+      if (audioState) {
+        audioState.disposed = true;
+        void audioState.context.close().catch(() => undefined);
       }
+
+      audioStateRef.current = null;
     };
   }, [
     autoPlay,
     cancelVisualTimeline,
-    clearPlayingListener,
     restartSoundcheck,
+    stopActiveAudio,
   ]);
 
   return (
